@@ -18,6 +18,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
+from core.views import PatientMessageListView
+
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path(
+        "patients/<int:patient_id>/messages/",
+        PatientMessageListView.as_view(),
+        name="patient-messages",
+    ),
 ]
