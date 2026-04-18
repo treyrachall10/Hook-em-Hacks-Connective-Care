@@ -1,0 +1,9 @@
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import Vigil from './frontend'
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <Vigil />
+  </React.StrictMode>,
+)
