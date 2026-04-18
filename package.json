@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "run": "start vigil.html",
     "build": "vite build",
     "preview": "vite preview"
   },
