@@ -1,4 +1,7 @@
-
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Vigil</title></head>
+<body>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -11,10 +14,13 @@
   --blue:#6098f0;--blue-dim:rgba(96,152,240,0.12);--blue-border:rgba(96,152,240,0.35);
   --purple:#9b6bf0;--purple-dim:rgba(155,107,240,0.12);
   --sleep:#4472c4;--sleep-dim:rgba(68,114,196,0.18);
+  --blink:#a89cc4;--wake:#4cc98a;
   --r:14px;--r-sm:8px;--r-lg:20px;
 }
 body{font-family:'Outfit',sans-serif;background:var(--canvas);color:var(--ink);}
 .app{min-height:700px;background:linear-gradient(160deg,#ede8f8 0%,#f4f0fb 30%,#eef4fb 65%,#e8f5ee 100%);}
+
+/* Role select */
 .rs-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:700px;gap:0;}
 .rs-brand{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
 .rs-brand-mark{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#9b6bf0,#6098f0);display:flex;align-items:center;justify-content:center;}
@@ -27,6 +33,8 @@ body{font-family:'Outfit',sans-serif;background:var(--canvas);color:var(--ink);}
 .rs-title{font-family:'DM Serif Display',serif;font-size:19px;color:var(--ink);}
 .rs-desc{font-size:11.5px;color:var(--ink3);line-height:1.6;}
 .rs-hint{margin-top:30px;font-size:11px;color:var(--ink4);letter-spacing:0.5px;}
+
+/* Nav */
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:11px 22px;border-bottom:1px solid rgba(155,107,240,0.1);background:rgba(255,255,255,0.5);backdrop-filter:blur(14px);}
 .logo{display:flex;align-items:center;gap:8px;cursor:pointer;}
 .logo-mark{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#9b6bf0,#6098f0);}
@@ -41,6 +49,8 @@ body{font-family:'Outfit',sans-serif;background:var(--canvas);color:var(--ink);}
 .pd-amber{background:var(--amber);animation:breathe 1.4s infinite;}
 .pd-blue{background:var(--blue);animation:breathe 2s infinite;}
 @keyframes breathe{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.3;transform:scale(0.7)}}
+
+/* Buttons */
 .btn{padding:8px 16px;border-radius:10px;font-size:12px;font-family:'Outfit',sans-serif;cursor:pointer;border:none;transition:opacity 0.15s,transform 0.1s;}
 .btn:active{transform:scale(0.97);}
 .btn-primary{background:linear-gradient(135deg,#9b6bf0,#7b4ed8);color:white;}
@@ -48,94 +58,116 @@ body{font-family:'Outfit',sans-serif;background:var(--canvas);color:var(--ink);}
 .btn-ghost{background:rgba(255,255,255,0.7);border:1px solid rgba(155,107,240,0.25);color:var(--ink3);}
 .btn-green{background:linear-gradient(135deg,#4cc98a,#2ea866);color:white;}
 .btn-amber{background:linear-gradient(135deg,#f0a500,#c47d00);color:white;}
-.btn-red{background:linear-gradient(135deg,#f06060,#c03030);color:white;}
 .btn-sleep{background:linear-gradient(135deg,#4472c4,#2e55a0);color:white;}
+
+/* Cards */
 .gc{background:var(--surface);border:1px solid rgba(255,255,255,0.85);border-radius:var(--r-lg);backdrop-filter:blur(8px);}
 .stat-card{padding:12px 14px;background:rgba(255,255,255,0.55);border:1px solid rgba(255,255,255,0.8);border-radius:12px;}
 .stat-val{font-family:'DM Serif Display',serif;font-size:28px;color:var(--ink);line-height:1;}
 .stat-lbl{font-size:10px;color:var(--ink3);margin-top:3px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:0.8px;}
 .eyebrow{font-size:9.5px;letter-spacing:2.5px;color:var(--ink3);text-transform:uppercase;margin-bottom:10px;font-family:'DM Mono',monospace;}
+
+/* Eye state display */
 .eye-state-big{font-family:'DM Serif Display',serif;font-size:32px;color:var(--ink);line-height:1;transition:color 0.3s;}
 .eye-state-big.awake{color:#1e7a4e;}
 .eye-state-big.asleep{color:#2e55a0;}
 .eye-state-big.blinking{color:var(--ink3);}
+
+/* EAR bar */
 .ear-bar-wrap{position:relative;height:8px;background:rgba(155,107,240,0.1);border-radius:99px;overflow:visible;margin:6px 0;}
 .ear-bar-fill{height:100%;border-radius:99px;transition:width 0.15s,background 0.3s;}
 .ear-thresh-line{position:absolute;top:-3px;bottom:-3px;width:2px;border-radius:1px;background:rgba(155,107,240,0.5);}
+.ear-thresh-label{position:absolute;top:-18px;font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace;transform:translateX(-50%);}
+
+/* State badge */
 .state-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:99px;font-size:11px;font-weight:500;}
 .sb-awake{background:var(--green-dim);border:1px solid var(--green-border);color:#1e7a4e;}
 .sb-asleep{background:var(--sleep-dim);border:1px solid rgba(68,114,196,0.35);color:#2e55a0;}
 .sb-blink{background:var(--amber-dim);border:1px solid var(--amber-border);color:#7a4a00;}
 .sb-unknown{background:rgba(168,156,196,0.12);border:1px solid rgba(168,156,196,0.3);color:var(--ink3);}
+
+/* Camera */
 .camwrap{border-radius:18px;overflow:hidden;background:#0c0a16;position:relative;display:flex;align-items:center;justify-content:center;}
 .cam-overlay-lbl{position:absolute;bottom:10px;left:12px;font-size:9px;letter-spacing:2px;color:rgba(200,190,240,0.4);text-transform:uppercase;font-family:'DM Mono',monospace;}
 .cam-rec{position:absolute;top:10px;right:12px;display:flex;align-items:center;gap:4px;}
 .rdot{width:5px;height:5px;border-radius:50%;background:#f06060;animation:breathe 1.1s infinite;}
 .rtxt{font-size:9px;color:rgba(200,190,240,0.4);letter-spacing:1.5px;font-family:'DM Mono',monospace;}
+
+/* Timeline */
 .timeline-wrap{padding:16px 18px;background:var(--surface);border:1px solid rgba(255,255,255,0.85);border-radius:var(--r-lg);}
 .timeline-track{height:28px;background:rgba(155,107,240,0.06);border-radius:6px;overflow:hidden;display:flex;position:relative;margin-bottom:6px;}
 .tl-segment{height:100%;transition:width 0.3s;position:relative;}
+.tl-seg-asleep{background:var(--sleep);opacity:0.85;}
+.tl-seg-awake{background:var(--green);opacity:0.75;}
+.tl-seg-blink{background:var(--blink);opacity:0.5;}
+.tl-seg-unknown{background:rgba(168,156,196,0.25);}
 .tl-legend{display:flex;gap:14px;flex-wrap:wrap;}
 .tl-leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink3);}
 .tl-leg-dot{width:10px;height:10px;border-radius:3px;}
+
+/* Sleep stats */
 .sleep-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+
+/* Alert banners */
 .alert-banner{padding:13px 16px;border-radius:14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .ab-green{background:rgba(255,255,255,0.65);border:1.5px solid var(--green-border);}
 .ab-amber{background:rgba(255,255,255,0.65);border:1.5px solid var(--amber-border);}
 .ab-blue{background:rgba(255,255,255,0.65);border:1.5px solid var(--blue-border);}
-.ab-purple{background:rgba(255,255,255,0.65);border:1.5px solid rgba(155,107,240,0.45);}
+
+/* Events */
 .ev-list{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;}
 .ev-item{display:flex;align-items:flex-start;gap:7px;}
 .ev-pip{width:5px;height:5px;border-radius:50%;margin-top:5px;flex-shrink:0;}
-/* ── Chat ── */
-.msg-list{display:flex;flex-direction:column;gap:8px;max-height:180px;overflow-y:auto;margin-bottom:8px;padding-right:2px;}
-.msg-bubble-wrap{display:flex;flex-direction:column;}
-.msg-bubble-wrap.is-me{align-items:flex-end;}
-.msg-bubble-wrap.is-other{align-items:flex-start;}
-.msg-sender-label{font-size:10px;color:var(--ink4);margin-bottom:2px;font-family:'DM Mono',monospace;letter-spacing:0.3px;}
+
+/* Messages */
+.msg-list{display:flex;flex-direction:column;gap:6px;max-height:150px;overflow-y:auto;margin-bottom:8px;}
+.mb-me-wrap{display:flex;flex-direction:column;align-items:flex-end;}
+.mb-other-wrap{display:flex;flex-direction:column;align-items:flex-start;}
 .mb-me{background:linear-gradient(135deg,#9b6bf0,#7b4ed8);color:white;padding:7px 11px;border-radius:12px;border-bottom-right-radius:3px;font-size:12px;line-height:1.5;max-width:88%;}
-.mb-patient{background:rgba(76,201,138,0.15);color:#1a1625;padding:7px 11px;border-radius:12px;border-bottom-left-radius:3px;font-size:12px;line-height:1.5;max-width:88%;border:1px solid rgba(76,201,138,0.25);}
-.mb-family{background:rgba(155,107,240,0.13);color:#1a1625;padding:7px 11px;border-radius:12px;border-bottom-left-radius:3px;font-size:12px;line-height:1.5;max-width:88%;border:1px solid rgba(155,107,240,0.22);}
-.mb-nurse{background:rgba(240,165,0,0.13);color:#1a1625;padding:7px 11px;border-radius:12px;border-bottom-left-radius:3px;font-size:12px;line-height:1.5;max-width:88%;border:1px solid rgba(240,165,0,0.25);}
-.mb-system{background:rgba(168,156,196,0.1);color:var(--ink3);padding:5px 10px;border-radius:8px;font-size:11px;line-height:1.4;max-width:96%;border:1px solid rgba(168,156,196,0.2);font-style:italic;align-self:center;}
-.msg-time{font-size:10px;color:var(--ink4);margin-top:2px;}
+.mb-other{background:rgba(255,255,255,0.85);color:var(--ink);padding:7px 11px;border-radius:12px;border-bottom-left-radius:3px;font-size:12px;line-height:1.5;max-width:88%;border:1px solid rgba(155,107,240,0.14);}
+.mb-nurse{background:rgba(255,243,210,0.9);color:#5a3200;padding:7px 11px;border-radius:12px;border-bottom-left-radius:3px;font-size:12px;line-height:1.5;max-width:88%;border:1px solid rgba(240,165,0,0.22);}
+.msg-meta{font-size:10px;color:var(--ink4);margin-top:2px;}
 .msg-row{display:flex;gap:6px;margin-top:8px;}
 .msg-inp{flex:1;padding:8px 11px;border:1px solid rgba(155,107,240,0.22);border-radius:9px;font-size:12px;background:rgba(255,255,255,0.75);color:var(--ink);font-family:'Outfit',sans-serif;outline:none;}
 .msg-inp::placeholder{color:var(--ink4);}
+
+/* Conn chips */
 .conn-chip{font-size:11px;padding:3px 9px;border-radius:99px;}
 .conn-on{background:var(--green-dim);border:1px solid var(--green-border);color:#1e7a4e;}
 .conn-off{background:rgba(168,156,196,0.1);border:1px solid rgba(168,156,196,0.25);color:var(--ink4);}
+
+/* Notif */
 .notif-card{padding:10px 13px;display:flex;align-items:flex-start;gap:8px;margin-bottom:7px;}
 .notif-icon{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+/* Priority badges */
 .pri-badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:99px;font-size:9.5px;font-family:'DM Mono',monospace;}
 .pri-low{background:var(--green-dim);color:#1e7a4e;border:1px solid var(--green-border);}
 .pri-med{background:var(--amber-dim);color:#7a4a00;border:1px solid var(--amber-border);}
 .pri-high{background:var(--red-dim);color:#7a1e1e;border:1px solid var(--red-border);}
+.pri-info{background:var(--blue-dim);color:#1e3e7a;border:1px solid var(--blue-border);}
+
+/* MP chip */
 .mp-chip{font-size:9.5px;padding:3px 8px;border-radius:99px;font-family:'DM Mono',monospace;}
 .mp-idle{background:rgba(168,156,196,0.12);border:1px solid rgba(168,156,196,0.3);color:var(--ink4);}
 .mp-loading{background:var(--amber-dim);border:1px solid var(--amber-border);color:#7a4a00;}
 .mp-ready{background:var(--green-dim);border:1px solid var(--green-border);color:#1e7a4e;}
 .mp-error{background:var(--red-dim);border:1px solid var(--red-border);color:#7a1e1e;}
-/* ── Video call overlay ── */
-.vcall-overlay{position:fixed;inset:0;background:rgba(10,8,22,0.92);z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
-.vcall-box{background:#1a1630;border-radius:22px;border:1px solid rgba(155,107,240,0.35);padding:22px;display:flex;flex-direction:column;align-items:center;gap:14px;min-width:340px;}
-.vcall-videos{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;}
-.vcall-vid-wrap{border-radius:14px;overflow:hidden;background:#0c0a16;position:relative;aspect-ratio:4/3;min-height:140px;}
-.vcall-vid-wrap video{width:100%;height:100%;object-fit:cover;display:block;}
-.vcall-vid-label{position:absolute;bottom:8px;left:10px;font-size:9px;color:rgba(200,190,240,0.55);letter-spacing:1.5px;font-family:'DM Mono',monospace;text-transform:uppercase;}
-.vcall-timer{font-family:'DM Mono',monospace;font-size:20px;color:rgba(200,190,240,0.6);letter-spacing:2px;}
-.vcall-controls{display:flex;gap:10px;}
-/* Nurse call request banner */
-.call-req-banner{background:rgba(255,255,255,0.72);border:1.5px solid rgba(155,107,240,0.45);border-radius:16px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+
+/* Gauge circle */
+.gauge-svg{overflow:visible;}
 </style>
 
 <div class="app" id="app"></div>
 
 <script>
-const CH=new BroadcastChannel('vigil_v5');
+const CH=new BroadcastChannel('vigil_v4');
 
+/* ── EAR landmarks ── */
 const LEFT_EYE=[362,385,387,263,373,380];
 const RIGHT_EYE=[33,160,158,133,153,144];
+
+/* ── Thresholds ── */
 const EAR_OPEN=0.24;
 const EAR_BLINK=0.15;
 const BLINK_MAX_MS=350;
@@ -144,9 +176,9 @@ const WAKE_CONFIRM_MS=600;
 const MOTION_ALERT=35;
 const MOTION_HIGH=60;
 
+/* ── State ── */
 const S={
-  role:null,
-  patientName:'Patient 01',patientRoom:'Room 1',patientWard:'ICU',
+  role:null,patientName:'George P.',patientRoom:'Room 1',patientWard:'ICU',
   isMonitoring:false,mpStatus:'idle',
   eyeState:'unknown',confidence:0,lastEAR:0,earHistory:[],earSmooth:0,
   lidStart:null,lidOpen:true,blinkCount:0,
@@ -155,26 +187,15 @@ const S={
   totalSleepMs:0,totalAwakeMs:0,
   alertsToday:0,motionAlertsToday:0,sessionStart:null,
   motionLevel:0,motionHistory:[],prevLandmarks:null,lastMotionEvent:0,
-  events:[],
-  /* messages: {from, role, text, time, isSystem} */
-  messages:[],
+  events:[],messages:[],
   notifications:[],nurseNotifications:[],
   patientConnected:false,familyConnected:false,nurseConnected:false,
   familyAlerted:false,nurseAlerted:false,nurseMotionCooldown:0,
   faceMesh:null,mpCamera:null,lastFrame:null,frameCount:0,
-  /* video call state */
-  /* 'idle' | 'pending_nurse' | 'approved' | 'active' | 'denied' */
-  callState:'idle',
-  callRequestId:null,
-  vcallTimer:0,
-  vcallInterval:null,
-  /* WebRTC */
-  peerConn:null,
-  localStream:null,
-  remoteStream:null,
+  videoCallState:null,
+  videoCallUrl:null, // <-- ADD THIS
 };
 
-/* ── Helpers ── */
 function now(){return Date.now();}
 function tsShort(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
 function dist(a,b){return Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2);}
@@ -186,9 +207,7 @@ function calcMotion(cur,prev){
   let t=0;[1,4,10,33,61,93,133,152,168,234,263,291,323,356,389,397,454].forEach(i=>{if(cur[i]&&prev[i])t+=dist(cur[i],prev[i]);});
   return Math.min(100,Math.round(t*6000));
 }
-function fmtCallTime(s){const m=Math.floor(s/60),r=s%60;return String(m).padStart(2,'0')+':'+String(r).padStart(2,'0');}
 
-/* ── Sleep state machine ── */
 function transitionSleepState(newState){
   if(S.sleepState===newState)return;
   const old=S.sleepState;
@@ -199,8 +218,7 @@ function transitionSleepState(newState){
   S.sleepState=newState;S.sleepStateStart=now();
   S.currentSeg={state:newState,start:now(),end:null,dur:0};
   const labels={awake:'Patient awake',asleep:'Sleep detected',blinking:'Blink detected',unknown:'Signal lost'};
-  addEvent(newState,labels[newState]||newState);
-  broadcastState();
+  addEvent(newState,labels[newState]||newState);broadcastState();
 }
 
 function processFrame(lm){
@@ -210,14 +228,17 @@ function processFrame(lm){
   const sm=S.earHistory.reduce((a,b)=>a+b,0)/S.earHistory.length;
   S.lastEAR=+sm.toFixed(3);S.earSmooth=sm;
   S.confidence=Math.min(99,Math.round(Math.abs(sm-((EAR_OPEN+EAR_BLINK)/2))*400+45));
-  const lidOpen=sm>EAR_OPEN,lidClosed=sm<EAR_BLINK;
+  const lidOpen=sm>EAR_OPEN;const lidClosed=sm<EAR_BLINK;
   const t=now();
   if(lidOpen){
-    if(!S.lidOpen){const closedDur=t-S.lidStart;if(closedDur<=BLINK_MAX_MS){S.blinkCount++;if(S.sleepState!=='asleep')transitionSleepState('awake');else transitionSleepState('blinking');}}
+    if(!S.lidOpen){
+      const closedDur=t-S.lidStart;
+      if(closedDur<=BLINK_MAX_MS){S.blinkCount++;if(S.sleepState!=='asleep')transitionSleepState('awake');else transitionSleepState('blinking');}
+    }
     S.lidOpen=true;S.lidStart=null;
     if(S.sleepState==='asleep'){if(!S._wakeStart)S._wakeStart=t;else if(t-S._wakeStart>WAKE_CONFIRM_MS){transitionSleepState('awake');S._wakeStart=null;S.alertsToday++;}}
     else{S._wakeStart=null;if(S.sleepState==='unknown'||S.sleepState==='blinking')transitionSleepState('awake');}
-  }else{
+  } else {
     S._wakeStart=null;
     if(S.lidOpen){S.lidOpen=false;S.lidStart=t;}
     if(S.lidStart&&(t-S.lidStart)>SLEEP_CONFIRM_MS){if(S.sleepState!=='asleep')transitionSleepState('asleep');}
@@ -231,7 +252,11 @@ function processFrame(lm){
   broadcastState();updatePatientLive();
 }
 
-function getTimelineSegments(){const segs=[...S.segments];if(S.currentSeg){segs.push({...S.currentSeg,end:now(),dur:now()-S.currentSeg.start});}return segs;}
+function getTimelineSegments(){
+  const segs=[...S.segments];
+  if(S.currentSeg)segs.push({...S.currentSeg,end:now(),dur:now()-S.currentSeg.start});
+  return segs;
+}
 function totalSessionMs(){return S.sessionStart?now()-S.sessionStart:0;}
 function currentSleepMs(){let t=S.totalSleepMs;if(S.sleepState==='asleep')t+=now()-S.sleepStateStart;return t;}
 function currentAwakeMs(){let t=S.totalAwakeMs;if(S.sleepState==='awake')t+=now()-S.sleepStateStart;return t;}
@@ -239,10 +264,13 @@ function sleepPct(){const tot=totalSessionMs();return tot>0?Math.round(currentSl
 
 function broadcastState(){
   const segs=getTimelineSegments();
-  CH.postMessage({type:'state_update',eyeState:S.sleepState,confidence:S.confidence,lastEAR:S.lastEAR,
-    alertsToday:S.alertsToday,motionAlertsToday:S.motionAlertsToday,events:S.events.slice(0,30),
-    motionLevel:S.motionLevel,segments:segs,totalSleepMs:currentSleepMs(),totalAwakeMs:currentAwakeMs(),
-    sessionMs:totalSessionMs(),blinkCount:S.blinkCount,sleepPct:sleepPct()});
+  CH.postMessage({type:'state_update',
+    eyeState:S.sleepState,confidence:S.confidence,lastEAR:S.lastEAR,
+    alertsToday:S.alertsToday,motionAlertsToday:S.motionAlertsToday,
+    events:S.events.slice(0,30),motionLevel:S.motionLevel,
+    segments:segs,totalSleepMs:currentSleepMs(),totalAwakeMs:currentAwakeMs(),
+    sessionMs:totalSessionMs(),blinkCount:S.blinkCount,sleepPct:sleepPct()
+  });
 }
 
 function addEvent(type,text){
@@ -251,175 +279,65 @@ function addEvent(type,text){
   broadcastState();
 }
 
-/* ── WebRTC helpers ── */
-const ICE={iceServers:[{urls:'stun:stun.l.google.com:19302'}]};
-
-async function startCallAsPatient(){
-  if(S.peerConn)return;
-  S.peerConn=new RTCPeerConnection(ICE);
-  S.localStream=await navigator.mediaDevices.getUserMedia({video:true,audio:true}).catch(()=>null);
-  if(S.localStream)S.localStream.getTracks().forEach(t=>S.peerConn.addTrack(t,S.localStream));
-  S.peerConn.ontrack=e=>{S.remoteStream=e.streams[0];showCallUI();};
-  S.peerConn.onicecandidate=e=>{if(e.candidate)CH.postMessage({type:'vcall_ice',from:'patient',candidate:e.candidate});};
-  const offer=await S.peerConn.createOffer();
-  await S.peerConn.setLocalDescription(offer);
-  CH.postMessage({type:'vcall_offer',from:'patient',sdp:offer});
-  S.callState='active';startCallTimer();showCallUI();render();
-}
-
-async function startCallAsFamily(){
-  if(S.peerConn)return;
-  S.peerConn=new RTCPeerConnection(ICE);
-  S.localStream=await navigator.mediaDevices.getUserMedia({video:true,audio:true}).catch(()=>null);
-  if(S.localStream)S.localStream.getTracks().forEach(t=>S.peerConn.addTrack(t,S.localStream));
-  S.peerConn.ontrack=e=>{S.remoteStream=e.streams[0];showCallUI();};
-  S.peerConn.onicecandidate=e=>{if(e.candidate)CH.postMessage({type:'vcall_ice',from:'family',candidate:e.candidate});};
-}
-
-async function handleOffer(sdp){
-  if(!S.peerConn)await startCallAsFamily();
-  await S.peerConn.setRemoteDescription(new RTCSessionDescription(sdp));
-  const answer=await S.peerConn.createAnswer();
-  await S.peerConn.setLocalDescription(answer);
-  CH.postMessage({type:'vcall_answer',from:'family',sdp:answer});
-  S.callState='active';startCallTimer();showCallUI();render();
-}
-
-async function handleAnswer(sdp){
-  if(!S.peerConn)return;
-  await S.peerConn.setRemoteDescription(new RTCSessionDescription(sdp));
-}
-
-function handleIce(candidate){
-  if(S.peerConn&&candidate)S.peerConn.addIceCandidate(new RTCIceCandidate(candidate)).catch(()=>{});
-}
-
-function hangUp(notify=true){
-  if(S.vcallInterval){clearInterval(S.vcallInterval);S.vcallInterval=null;}
-  if(S.localStream){S.localStream.getTracks().forEach(t=>t.stop());S.localStream=null;}
-  if(S.peerConn){S.peerConn.close();S.peerConn=null;}
-  S.remoteStream=null;S.callState='idle';S.vcallTimer=0;
-  const ov=document.getElementById('vcall-overlay');if(ov)ov.remove();
-  if(notify)CH.postMessage({type:'vcall_hangup',from:S.role});
-  render();
-}
-
-function startCallTimer(){
-  S.vcallTimer=0;
-  if(S.vcallInterval)clearInterval(S.vcallInterval);
-  S.vcallInterval=setInterval(()=>{S.vcallTimer++;const el=document.getElementById('vcall-timer');if(el)el.textContent=fmtCallTime(S.vcallTimer);},1000);
-}
-
-function showCallUI(){
-  let ov=document.getElementById('vcall-overlay');
-  if(!ov){
-    ov=document.createElement('div');ov.id='vcall-overlay';ov.className='vcall-overlay';
-    document.body.appendChild(ov);
-  }
-  const remoteLabel=S.role==='patient'?'Family':'Patient 01';
-  const localLabel=S.role==='patient'?'You (Patient)':'You (Family)';
-  ov.innerHTML=`
-    <div class="vcall-box">
-      <div style="font-family:'DM Serif Display',serif;font-size:18px;color:rgba(200,190,240,0.9)">Video call</div>
-      <div class="vcall-videos">
-        <div class="vcall-vid-wrap">
-          <video id="vcall-remote" autoplay playsinline style="width:100%;height:100%;object-fit:cover;"></video>
-          <div class="vcall-vid-label">${remoteLabel}</div>
-        </div>
-        <div class="vcall-vid-wrap">
-          <video id="vcall-local" autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;transform:scaleX(-1);"></video>
-          <div class="vcall-vid-label">${localLabel}</div>
-        </div>
-      </div>
-      <div class="vcall-timer" id="vcall-timer">${fmtCallTime(S.vcallTimer)}</div>
-      <div class="vcall-controls">
-        <button class="btn btn-red" onclick="hangUp(true)">End call</button>
-      </div>
-    </div>`;
-  const remVid=document.getElementById('vcall-remote');
-  const locVid=document.getElementById('vcall-local');
-  if(remVid&&S.remoteStream)remVid.srcObject=S.remoteStream;
-  if(locVid&&S.localStream)locVid.srcObject=S.localStream;
-}
-
-/* ── BroadcastChannel ── */
 CH.onmessage=e=>{
   const d=e.data;
   if(d.type==='ping')handlePing(d.from);
   if(d.type==='pong')handlePong(d.from);
-
-  /* state updates for family/nurse */
   if(d.type==='state_update'&&(S.role==='family'||S.role==='nurse')){
-    Object.assign(S,{eyeState:d.eyeState,confidence:d.confidence,lastEAR:d.lastEAR,
-      alertsToday:d.alertsToday,motionAlertsToday:d.motionAlertsToday,events:d.events,
-      motionLevel:d.motionLevel,remoteSegments:d.segments,remoteSleepMs:d.totalSleepMs,
-      remoteAwakeMs:d.totalAwakeMs,remoteSessionMs:d.sessionMs,remoteBlinkCount:d.blinkCount,remoteSleepPct:d.sleepPct});
+    Object.assign(S,{eyeState:d.eyeState,confidence:d.confidence,lastEAR:d.lastEAR,alertsToday:d.alertsToday,motionAlertsToday:d.motionAlertsToday,events:d.events,motionLevel:d.motionLevel,remoteSegments:d.segments,remoteSleepMs:d.totalSleepMs,remoteAwakeMs:d.totalAwakeMs,remoteSessionMs:d.sessionMs,remoteBlinkCount:d.blinkCount,remoteSleepPct:d.sleepPct});
     if(S.role==='family'){
-      if(d.eyeState==='awake'&&!S.familyAlerted){S.familyAlerted=true;S.notifications.unshift({id:now(),title:S.patientName+' is awake',sub:'Eyes open · '+tsShort(),type:'awake',ts:tsShort()});playTone([880,880,1100]);}
-      if(d.eyeState==='asleep'&&S.familyAlerted){S.familyAlerted=false;S.notifications.unshift({id:now(),title:S.patientName+' fell asleep',sub:'Sleep detected · '+tsShort(),type:'sleep',ts:tsShort()});}
+      if(d.eyeState==='awake'&&!S.familyAlerted){S.familyAlerted=true;S.notifications.unshift({id:now(),title:S.patientName+' is awake',sub:'Eyes open · '+tsShort(),color:'var(--green)',ts:tsShort(),type:'awake'});playTone([880,880,1100]);}
+      if(d.eyeState==='asleep'&&S.familyAlerted){S.familyAlerted=false;S.videoCallState=null;S.notifications.unshift({id:now(),title:S.patientName+' fell asleep',sub:'Sleep detected · '+tsShort(),color:'var(--blue)',ts:tsShort(),type:'sleep'});}
     }
     if(S.role==='nurse'){
-      if(d.eyeState==='awake'&&!S.nurseAlerted){S.nurseAlerted=true;S.nurseNotifications.unshift({id:now(),type:'eye',title:'Awake — '+S.patientName,sub:S.patientRoom+' · '+tsShort(),priority:'medium',ts:tsShort()});playTone([660,880]);}
-      if(d.eyeState==='asleep')S.nurseAlerted=false;
+      /* Only fire awake alert on a new awake edge (not already alerted this wake session) */
+      if(d.eyeState==='awake'&&S._prevEyeState!=='awake'&&!S.nurseAlerted){
+        S.nurseAlerted=true;
+        S.nurseNotifications.unshift({id:now(),type:'eye',title:'Awake — '+S.patientName,sub:S.patientRoom+' · '+tsShort(),priority:'medium',ts:tsShort()});
+        playTone([660,880]);
+      }
+      /* Reset nurseAlerted only on a sleep edge so a new wake after sleep fires again */
+      if(d.eyeState==='asleep'&&S._prevEyeState!=='asleep'){
+        S.nurseAlerted=false;
+        S.nurseBannerDismissed=false;
+        S.nurseNotifications.unshift({id:now(),type:'sleep',title:'Sleep detected — '+S.patientName,sub:S.patientRoom+' · '+tsShort(),priority:'low',ts:tsShort()});
+        playTone([440,330]);
+      }
       const t=now();
-      if(d.motionLevel>MOTION_ALERT&&(t-S.nurseMotionCooldown)>15000){S.nurseMotionCooldown=t;const hi=d.motionLevel>MOTION_HIGH;S.nurseNotifications.unshift({id:t,type:'motion',title:(hi?'High':'Elevated')+' movement',sub:S.patientName+' · '+d.motionLevel+'% · '+tsShort(),priority:hi?'high':'medium',ts:tsShort()});playTone(hi?[440,550,660]:[550,660]);S.motionAlertsToday++;}
-      if(d.eyeState==='asleep'&&S._prevEyeState!=='asleep'){S.nurseNotifications.unshift({id:now(),type:'sleep',title:'Sleep detected — '+S.patientName,sub:S.patientRoom+' · '+tsShort(),priority:'low',ts:tsShort()});playTone([440,330]);}
+      if(d.motionLevel>MOTION_ALERT&&(t-S.nurseMotionCooldown)>15000){
+        S.nurseMotionCooldown=t;
+        const hi=d.motionLevel>MOTION_HIGH;
+        S.nurseNotifications.unshift({id:t,type:'motion',title:(hi?'High':'Elevated')+' movement',sub:S.patientName+' · '+d.motionLevel+'% · '+tsShort(),priority:hi?'high':'medium',ts:tsShort()});
+        playTone(hi?[440,550,660]:[550,660]);S.motionAlertsToday++;
+      }
       S._prevEyeState=d.eyeState;
     }
     render();
   }
-
   if(d.type==='frame'&&(S.role==='family'||S.role==='nurse')){
     S.lastFrame=d.data;
     setTimeout(()=>drawFeedFrame(S.role==='family'?'familyFeedCanvas':'nurseFeedCanvas'),20);
   }
-
-  /* ── Chat ── */
   if(d.type==='chat'){
     const isMine=d.from===S.role;
-    const roleLabels={patient:'Patient 01',family:'Family',nurse:'Nurse'};
-    S.messages.push({from:d.from,isMine,label:roleLabels[d.from]||d.from,text:d.text,time:d.time});
+    const lbl={patient:'Patient',family:'Family',nurse:'Nurse'}[d.from]||d.from;
+    S.messages.push({from:isMine?'me':d.from,label:lbl,text:d.text,time:d.time});
     render();setTimeout(()=>{const ml=document.getElementById('msg-list');if(ml)ml.scrollTop=ml.scrollHeight;},50);
   }
-
-  /* ── Video call signalling ── */
-  /* Family requests a call → nurse sees approval request */
-  if(d.type==='vcall_request'&&S.role==='nurse'){
-    S.callState='pending_nurse';S.callRequestId=d.id;
-    S.nurseNotifications.unshift({id:now(),type:'vcall_req',title:'Family requests video call',sub:S.patientName+' · '+tsShort(),priority:'high',ts:tsShort(),callId:d.id});
-    playTone([660,770,880]);render();
+  if(d.type==='video_call_request'&&S.role==='nurse'){
+    S.nurseNotifications.unshift({id:now(),type:'videocall',title:'Family video call request',sub:'Family would like to call '+S.patientName+' · '+tsShort(),priority:'high',ts:tsShort()});
+    playTone([880,1100,880]);render();
   }
-  /* Nurse approves → patient and family start WebRTC */
-  if(d.type==='vcall_approved'){
-    if(S.role==='patient'){
-      addSystemMsg('Nurse approved family video call. Connecting…');
-      startCallAsPatient();
-    }
-    if(S.role==='family'){
-      S.callState='approved';
-      addSystemMsg('Nurse approved your call request. Connecting…');
+  if(d.type==='video_call_response'){
+    if(S.role==='family' || S.role==='patient') {
+      S.videoCallState = d.allowed ? 'allowed' : 'rejected';
+      if(d.allowed && d.roomUrl){
+        S.videoCallUrl = d.roomUrl;
+      }
       render();
     }
   }
-  /* Nurse denies */
-  if(d.type==='vcall_denied'){
-    if(S.role==='family'){S.callState='idle';addSystemMsg('The nurse declined the call request at this time.');render();}
-    if(S.role==='patient'){addSystemMsg('Family call request was declined by nurse.');render();}
-  }
-  /* WebRTC offer (patient → family) */
-  if(d.type==='vcall_offer'&&S.role==='family'){handleOffer(d.sdp);}
-  /* WebRTC answer (family → patient) */
-  if(d.type==='vcall_answer'&&S.role==='patient'){handleAnswer(d.sdp);}
-  /* ICE */
-  if(d.type==='vcall_ice'&&d.from!==S.role){handleIce(d.candidate);}
-  /* Hang up */
-  if(d.type==='vcall_hangup'&&d.from!==S.role){hangUp(false);}
 };
-
-function addSystemMsg(text){
-  S.messages.push({from:'system',isMine:false,label:'System',text,time:tsShort(),isSystem:true});
-}
-
 function handlePing(from){
   if(from==='patient'&&(S.role==='family'||S.role==='nurse')){S.patientConnected=true;CH.postMessage({type:'pong',from:S.role});render();}
   if(from==='family'&&(S.role==='patient'||S.role==='nurse')){S.familyConnected=true;CH.postMessage({type:'pong',from:S.role});render();}
@@ -432,9 +350,10 @@ function handlePong(from){
   render();
 }
 
-function playTone(freqs){try{const ctx=new AudioContext();freqs.forEach((f,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=f;const t=ctx.currentTime+i*0.18;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.25,t+0.04);g.gain.linearRampToValueAtTime(0,t+0.2);o.start(t);o.stop(t+0.2);});}catch(e){}}
+function playTone(freqs){
+  try{const ctx=new AudioContext();freqs.forEach((f,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=f;const t=ctx.currentTime+i*0.18;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.25,t+0.04);g.gain.linearRampToValueAtTime(0,t+0.2);o.start(t);o.stop(t+0.2);});}catch(e){}
+}
 
-/* ── MediaPipe ── */
 function loadMediaPipe(){
   return new Promise((res,rej)=>{
     if(typeof FaceMesh!=='undefined'){res();return;}
@@ -450,49 +369,79 @@ function loadMediaPipe(){
     document.head.appendChild(s1);
   });
 }
-function updateMpChip(){const el=document.getElementById('mp-chip');if(!el)return;const labels={idle:'MP: idle',loading:'MP: loading…',ready:'MP: ready',error:'MP: error'};const cls={idle:'mp-idle',loading:'mp-loading',ready:'mp-ready',error:'mp-error'};el.textContent=labels[S.mpStatus];el.className='mp-chip '+(cls[S.mpStatus]||'mp-idle');}
-
-function drawEye(ctx,lm,idx,W,H,color){ctx.beginPath();idx.forEach((i,j)=>{const p=lm[i];j===0?ctx.moveTo(p.x*W,p.y*H):ctx.lineTo(p.x*W,p.y*H);});ctx.closePath();ctx.strokeStyle=color;ctx.lineWidth=1.6;ctx.stroke();ctx.fillStyle=color.replace('0.9','0.12');ctx.fill();}
-function eyeColor(){return S.sleepState==='awake'?'rgba(76,201,138,0.9)':S.sleepState==='asleep'?'rgba(68,114,196,0.9)':S.sleepState==='blinking'?'rgba(240,165,0,0.9)':'rgba(168,156,196,0.8)';}
-let frameThrottle=0;
-function sendFrame(vid,overlay){
-  const t=now();if(t-frameThrottle<230)return;frameThrottle=t;
-  try{const off=document.createElement('canvas');off.width=vid.videoWidth||320;off.height=vid.videoHeight||240;const ctx=off.getContext('2d');ctx.save();ctx.scale(-1,1);ctx.drawImage(vid,-off.width,0,off.width,off.height);ctx.restore();if(overlay&&overlay.width>0)ctx.drawImage(overlay,0,0,off.width,off.height);CH.postMessage({type:'frame',data:off.toDataURL('image/jpeg',0.42)});}catch(e){}
+function updateMpChip(){
+  const el=document.getElementById('mp-chip');if(!el)return;
+  const labels={idle:'MP: idle',loading:'MP: loading…',ready:'MP: ready',error:'MP: error'};
+  const cls={idle:'mp-idle',loading:'mp-loading',ready:'mp-ready',error:'mp-error'};
+  el.textContent=labels[S.mpStatus];el.className='mp-chip '+(cls[S.mpStatus]||'mp-idle');
 }
-function drawFeedFrame(id){if(!S.lastFrame)return;const c=document.getElementById(id);if(!c)return;const img=new Image();img.onload=()=>{c.width=img.width;c.height=img.height;c.getContext('2d').drawImage(img,0,0);};img.src=S.lastFrame;}
+
+function drawEye(ctx,lm,idx,W,H,color){
+  ctx.beginPath();idx.forEach((i,j)=>{const p=lm[i];j===0?ctx.moveTo(p.x*W,p.y*H):ctx.lineTo(p.x*W,p.y*H);});
+  ctx.closePath();ctx.strokeStyle=color;ctx.lineWidth=1.6;ctx.stroke();ctx.fillStyle=color.replace('0.9','0.12');ctx.fill();
+}
+function eyeColor(){
+  return S.sleepState==='awake'?'rgba(76,201,138,0.9)':S.sleepState==='asleep'?'rgba(68,114,196,0.9)':S.sleepState==='blinking'?'rgba(240,165,0,0.9)':'rgba(168,156,196,0.8)';
+}
+let frameThrottle=0;
+function sendFrame(canvas){
+  const t=now();if(t-frameThrottle<230)return;frameThrottle=t;
+  try{CH.postMessage({type:'frame',data:canvas.toDataURL('image/jpeg',0.42)});}catch(e){}
+}
+function drawFeedFrame(id){
+  if(!S.lastFrame)return;const c=document.getElementById(id);if(!c)return;
+  const img=new Image();img.onload=()=>{c.width=img.width;c.height=img.height;c.getContext('2d').drawImage(img,0,0);};img.src=S.lastFrame;
+}
 
 async function startCamera(){
   S.isMonitoring=true;S.sessionStart=now();S.earHistory=[];S.motionHistory=[];
   S.prevLandmarks=null;S.lidOpen=true;S.lidStart=null;S.frameCount=0;
   S.segments=[];S.currentSeg=null;S.totalSleepMs=0;S.totalAwakeMs=0;S.blinkCount=0;
-  S.sleepState='unknown';S.sleepStateStart=now();render();
-  try{await loadMediaPipe();}catch(err){addEvent('error','MediaPipe: '+err.message);S.isMonitoring=false;render();return;}
-  try{S.faceMesh=new FaceMesh({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`});S.faceMesh.setOptions({maxNumFaces:1,refineLandmarks:true,minDetectionConfidence:0.5,minTrackingConfidence:0.5});}
-  catch(err){addEvent('error','FaceMesh init: '+err.message);S.isMonitoring=false;render();return;}
+  S.sleepState='unknown';S.sleepStateStart=now();
+  render();
+  try{await loadMediaPipe();}
+  catch(err){addEvent('error','MediaPipe: '+err.message);S.isMonitoring=false;render();return;}
+  try{
+    S.faceMesh=new FaceMesh({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`});
+    S.faceMesh.setOptions({maxNumFaces:1,refineLandmarks:true,minDetectionConfidence:0.5,minTrackingConfidence:0.5});
+  }catch(err){addEvent('error','FaceMesh init: '+err.message);S.isMonitoring=false;render();return;}
+
   S.faceMesh.onResults(results=>{
     const vid=document.getElementById('pVid'),canvas=document.getElementById('pCanvas');
     if(!canvas||!vid)return;
-    const ctx=canvas.getContext('2d');const W=vid.videoWidth||640,H=vid.videoHeight||480;
-    canvas.width=W;canvas.height=H;ctx.clearRect(0,0,W,H);
+    const ctx=canvas.getContext('2d');
+    /* results.image is the exact frame MediaPipe processed — always has correct dimensions */
+    const src=results.image||vid;
+    const W=src.width||src.videoWidth||640;
+    const H=src.height||src.videoHeight||480;
+    if(canvas.width!==W)canvas.width=W;
+    if(canvas.height!==H)canvas.height=H;
+
+    /* Draw mirrored video frame first */
+    ctx.save();
+    ctx.translate(W,0);
+    ctx.scale(-1,1);
+    ctx.drawImage(src,0,0,W,H);
+    ctx.restore();
+
     if(results.multiFaceLandmarks?.length){
-      const lm=results.multiFaceLandmarks[0];const col=eyeColor();
-      drawEye(ctx,lm,LEFT_EYE,W,H,col);drawEye(ctx,lm,RIGHT_EYE,W,H,col);
-      ctx.fillStyle='rgba(255,255,255,0.55)';ctx.font='10px DM Mono, monospace';ctx.fillText('EAR '+S.lastEAR.toFixed(3),8,H-8);
+      const lm=results.multiFaceLandmarks[0];
+      /* landmarks come from the non-mirrored image, mirror them to match canvas */
+      const mirroredLm=lm.map(p=>({x:1-p.x,y:p.y,z:p.z}));
       if(S.isMonitoring)processFrame(lm);
       const fd=document.getElementById('ps-face');if(fd){fd.textContent='face ✓';fd.style.color='#4cc98a';}
-    }else{
+    } else {
       const fd=document.getElementById('ps-face');if(fd){fd.textContent='no face';fd.style.color='#a89cc4';}
       if(S.isMonitoring){S.confidence=0;broadcastState();updatePatientLive();}
     }
-    sendFrame(vid,canvas);
+    sendFrame(canvas);
   });
+
   const vid=document.getElementById('pVid');if(!vid){S.isMonitoring=false;render();return;}
   try{
-    const stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640},height:{ideal:480},facingMode:'user'}});
-    vid.srcObject=stream;
-    await new Promise((res,rej)=>{vid.onloadedmetadata=()=>vid.play().then(res).catch(rej);setTimeout(rej,6000);});
     S.mpCamera=new Camera(vid,{onFrame:async()=>{if(vid.readyState>=2&&S.isMonitoring){try{await S.faceMesh.send({image:vid});}catch(e){}}},width:640,height:480});
-    S.mpCamera.start();addEvent('info','Monitoring started');render();
+    await S.mpCamera.start();
+    addEvent('info','Monitoring started');render();
   }catch(err){S.isMonitoring=false;addEvent('error','Camera: '+err.message);render();}
 }
 
@@ -508,46 +457,30 @@ function stopCamera(){
 function sendMsg(){
   const inp=document.getElementById('msg-input');if(!inp||!inp.value.trim())return;
   const text=inp.value.trim(),time=tsShort();inp.value='';
-  const roleLabels={patient:'Patient 01',family:'Family',nurse:'Nurse'};
-  S.messages.push({from:S.role,isMine:true,label:roleLabels[S.role],text,time});
+  const lbl={patient:'Patient',family:'Family',nurse:'Nurse'}[S.role];
+  S.messages.push({from:'me',label:lbl,text,time});
   CH.postMessage({type:'chat',from:S.role,text,time});
   render();setTimeout(()=>{const ml=document.getElementById('msg-list');if(ml)ml.scrollTop=ml.scrollHeight;},50);
 }
 
-/* ── Family requests call ── */
-function requestCall(){
-  if(S.callState!=='idle')return;
-  const id='cr_'+now();
-  S.callState='pending_nurse';S.callRequestId=id;
-  CH.postMessage({type:'vcall_request',from:'family',id});
-  addSystemMsg('Call request sent — waiting for nurse approval…');
-  render();
-}
-
-/* ── Nurse approves/denies ── */
-function nurseApproveCall(callId){
-  S.callState='idle';
-  S.nurseNotifications.forEach(n=>{if(n.callId===callId)n.acked=true;});
-  CH.postMessage({type:'vcall_approved',callId});
-  addSystemMsg('You approved the family video call.');
-  render();
-}
-function nurseDenyCall(callId){
-  S.callState='idle';
-  S.nurseNotifications.forEach(n=>{if(n.callId===callId)n.acked=true;});
-  CH.postMessage({type:'vcall_denied',callId});
-  addSystemMsg('You declined the family video call request.');
-  render();
-}
-
-/* ── Live update ── */
 function updatePatientLive(){
   const el=id=>document.getElementById(id);
   const stateLabels={awake:'Awake',asleep:'Asleep',blinking:'Blinking',unknown:'Detecting…'};
-  if(el('ps-state-big')){const cls={awake:'awake',asleep:'asleep',blinking:'blinking',unknown:''};el('ps-state-big').textContent=stateLabels[S.sleepState]||'—';el('ps-state-big').className='eye-state-big '+(cls[S.sleepState]||'');}
-  if(el('ps-badge')){const bclass={awake:'sb-awake',asleep:'sb-asleep',blinking:'sb-blink',unknown:'sb-unknown'};el('ps-badge').className='state-badge '+(bclass[S.sleepState]||'sb-unknown');el('ps-badge').textContent=stateLabels[S.sleepState]||'—';}
+  if(el('ps-state-big')){
+    const cls={awake:'awake',asleep:'asleep',blinking:'blinking',unknown:''};
+    el('ps-state-big').textContent=stateLabels[S.sleepState]||'—';
+    el('ps-state-big').className='eye-state-big '+(cls[S.sleepState]||'');
+  }
+  if(el('ps-badge')){
+    const bclass={awake:'sb-awake',asleep:'sb-asleep',blinking:'sb-blink',unknown:'sb-unknown'};
+    el('ps-badge').className='state-badge '+(bclass[S.sleepState]||'sb-unknown');
+    el('ps-badge').textContent=stateLabels[S.sleepState]||'—';
+  }
   const earPct=Math.max(0,Math.min(100,Math.round(S.lastEAR/0.4*100)));
-  if(el('ps-ear-fill')){const col=S.sleepState==='awake'?'#4cc98a':S.sleepState==='asleep'?'#4472c4':S.sleepState==='blinking'?'#f0a500':'#a89cc4';el('ps-ear-fill').style.width=earPct+'%';el('ps-ear-fill').style.background=col;}
+  if(el('ps-ear-fill')){
+    const col=S.sleepState==='awake'?'#4cc98a':S.sleepState==='asleep'?'#4472c4':S.sleepState==='blinking'?'#f0a500':'#a89cc4';
+    el('ps-ear-fill').style.width=earPct+'%';el('ps-ear-fill').style.background=col;
+  }
   if(el('ps-ear-val'))el('ps-ear-val').textContent=S.lastEAR.toFixed(3);
   const mc=S.motionLevel>MOTION_HIGH?'#f06060':S.motionLevel>MOTION_ALERT?'#f0a500':'#4cc98a';
   if(el('ps-motion-fill')){el('ps-motion-fill').style.width=S.motionLevel+'%';el('ps-motion-fill').style.background=mc;}
@@ -562,14 +495,32 @@ function updatePatientLive(){
   if(el('ps-evlist'))el('ps-evlist').innerHTML=evHTML(S.events.slice(0,8));
 }
 
-function renderTimelineInline(id){const el=document.getElementById(id);if(!el)return;const segs=getTimelineSegments();const totMs=totalSessionMs();if(totMs<500){el.innerHTML='<div style="font-size:11px;color:var(--ink4);padding:8px 0;font-style:italic">Timeline builds as monitoring runs…</div>';return;}el.innerHTML=timelineHTML(segs,totMs);}
+function renderTimelineInline(id){
+  const el=document.getElementById(id);if(!el)return;
+  const segs=getTimelineSegments();const totMs=totalSessionMs();
+  if(totMs<500){el.innerHTML='<div style="font-size:11px;color:var(--ink4);padding:8px 0;font-style:italic">Timeline builds as monitoring runs…</div>';return;}
+  el.innerHTML=timelineHTML(segs,totMs);
+}
 
 function timelineHTML(segs,totMs){
   const colMap={awake:'var(--green)',asleep:'var(--sleep)',blinking:'var(--blink)',unknown:'rgba(168,156,196,0.3)'};
-  const bars=segs.map(seg=>{const pct=Math.max(0.2,Math.min(100,((seg.dur||0)/totMs)*100));const col=colMap[seg.state]||'rgba(168,156,196,0.3)';const label=seg.state==='asleep'?fmtDurMin(seg.dur||0):'';return `<div class="tl-segment" style="width:${pct}%;background:${col};" title="${seg.state} · ${fmtDur(seg.dur||0)}">${label?`<span style="font-size:8px;color:white;opacity:0.8;padding:0 3px;line-height:28px;white-space:nowrap;overflow:hidden;">${label}</span>`:''}</div>`;}).join('');
-  return `<div class="timeline-track">${bars||'<div style="width:100%;background:rgba(168,156,196,0.15);"></div>'}</div>
-  <div style="display:flex;justify-content:space-between;font-size:9.5px;color:var(--ink4);font-family:'DM Mono',monospace;margin-bottom:8px;"><span>0s</span><span>${fmtDur(totMs/2)}</span><span>${fmtDur(totMs)}</span></div>
-  <div class="tl-legend"><div class="tl-leg-item"><div class="tl-leg-dot" style="background:var(--green);"></div>Awake</div><div class="tl-leg-item"><div class="tl-leg-dot" style="background:var(--sleep);"></div>Asleep</div><div class="tl-leg-item"><div class="tl-leg-dot" style="background:var(--amber);"></div>Blinking</div></div>`;
+  const bars=segs.map(seg=>{
+    const pct=Math.max(0.2,Math.min(100,((seg.dur||0)/totMs)*100));
+    const col=colMap[seg.state]||'rgba(168,156,196,0.3)';
+    const label=seg.state==='asleep'?fmtDurMin(seg.dur||0):'';
+    return `<div class="tl-segment tl-seg-${seg.state}" style="width:${pct}%;background:${col};" title="${seg.state} · ${fmtDur(seg.dur||0)}">${label?`<span style="font-size:8px;color:white;opacity:0.8;padding:0 3px;line-height:28px;white-space:nowrap;overflow:hidden;">${label}</span>`:''}</div>`;
+  }).join('');
+  const midLabel=fmtDur(totMs/2);
+  return `
+  <div class="timeline-track">${bars||'<div style="width:100%;background:rgba(168,156,196,0.15);"></div>'}</div>
+  <div style="display:flex;justify-content:space-between;font-size:9.5px;color:var(--ink4);font-family:'DM Mono',monospace;margin-bottom:8px;">
+    <span>0s</span><span>${midLabel}</span><span>${fmtDur(totMs)}</span>
+  </div>
+  <div class="tl-legend">
+    <div class="tl-leg-item"><div class="tl-leg-dot" style="background:var(--green);"></div>Awake</div>
+    <div class="tl-leg-item"><div class="tl-leg-dot" style="background:var(--sleep);"></div>Asleep</div>
+    <div class="tl-leg-item"><div class="tl-leg-dot" style="background:var(--blink);"></div>Blinking/droopy</div>
+  </div>`;
 }
 
 function evHTML(evs){
@@ -579,45 +530,29 @@ function evHTML(evs){
 }
 
 function connChip(on,label){return `<div class="conn-chip ${on?'conn-on':'conn-off'}">${on?'<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--green);margin-right:4px;vertical-align:middle;"></span>':''}${label}</div>`;}
-
-/* ── Chat HTML — now shows sender label clearly ── */
 function msgListHTML(){
   if(!S.messages.length)return '<div style="font-size:11px;color:var(--ink4);font-style:italic">No messages yet.</div>';
-  const roleColors={patient:'#1e7a4e',family:'#5a3aaa',nurse:'#7a4a00',system:'var(--ink4)'};
-  return S.messages.map(m=>{
-    if(m.isSystem){return `<div style="display:flex;justify-content:center;"><div class="mb-system">${m.text}</div></div>`;}
-    const bubbleCls=m.isMine?'mb-me':(m.from==='patient'?'mb-patient':m.from==='nurse'?'mb-nurse':'mb-family');
-    const labelColor=roleColors[m.from]||'var(--ink4)';
-    return `<div class="msg-bubble-wrap ${m.isMine?'is-me':'is-other'}">
-      <div class="msg-sender-label" style="color:${labelColor}">${m.label}</div>
-      <div class="${bubbleCls}">${m.text}</div>
-      <div class="msg-time">${m.time}</div>
-    </div>`;
-  }).join('');
+  return S.messages.map(m=>`<div class="${m.from==='me'?'mb-me-wrap':'mb-other-wrap'}"><div class="${m.from==='me'?'mb-me':m.from==='nurse'?'mb-nurse':'mb-other'}">${m.from!=='me'?`<span style="font-size:10px;opacity:0.65;display:block;margin-bottom:2px">${m.label}</span>`:''}${m.text}</div><div class="msg-meta">${m.time}</div></div>`).join('');
+}
+function msgBox(placeholder){return `<div class="gc" style="padding:13px 15px;"><div class="eyebrow">Messages</div><div class="msg-list" id="msg-list">${msgListHTML()}</div><div class="msg-row"><input class="msg-inp" id="msg-input" placeholder="${placeholder}" onkeydown="if(event.key==='Enter')sendMsg()"/><button class="btn btn-primary" style="padding:8px 12px" onclick="sendMsg()"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M10 1L4.5 6M10 1L7 10L4.5 6M10 1L1 4L4.5 6" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div>`;}
+
+function remoteTimelineHTML(){
+  const segs=S.remoteSegments||[];const totMs=S.remoteSessionMs||0;
+  if(totMs<500)return '<div style="font-size:11px;color:var(--ink4);font-style:italic">Waiting for patient monitoring…</div>';
+  return timelineHTML(segs,totMs);
 }
 
-function msgBox(placeholder){
-  return `<div class="gc" style="padding:13px 15px;">
-    <div class="eyebrow">Messages</div>
-    <div class="msg-list" id="msg-list">${msgListHTML()}</div>
-    <div class="msg-row"><input class="msg-inp" id="msg-input" placeholder="${placeholder}" onkeydown="if(event.key==='Enter')sendMsg()"/>
-    <button class="btn btn-primary" style="padding:8px 12px" onclick="sendMsg()"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M10 1L4.5 6M10 1L7 10L4.5 6M10 1L1 4L4.5 6" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-    </div></div>`;
-}
-
-function remoteTimelineHTML(){const segs=S.remoteSegments||[];const totMs=S.remoteSessionMs||0;if(totMs<500)return '<div style="font-size:11px;color:var(--ink4);font-style:italic">Waiting for patient monitoring…</div>';return timelineHTML(segs,totMs);}
-
-/* ── Renders ── */
 function renderRoleSelect(){
+  const baseUrl = window.location.origin + window.location.pathname;
   return `<div class="rs-wrap">
     <div class="rs-brand"><div class="rs-brand-mark"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5" stroke="white" stroke-width="1.3"/><circle cx="7" cy="7" r="2" fill="white"/></svg></div><span class="rs-brand-name">Vigil</span></div>
     <div class="rs-sub">Sleep & awareness monitoring — patient, family, nurse</div>
     <div class="rs-grid">
-      <div class="rs-card" onclick="setRole('patient')"><div class="rs-icon" style="background:var(--green-dim);border:1.5px solid var(--green-border);"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="8" r="3.5" stroke="#1e7a4e" stroke-width="1.3"/><path d="M4 20c0-3.8 3.1-6.5 7-6.5s7 2.7 7 6.5" stroke="#1e7a4e" stroke-width="1.3" stroke-linecap="round"/></svg></div><div class="rs-title">Patient room</div><div class="rs-desc">Bedside camera. EAR detection. Receive family video calls.</div></div>
-      <div class="rs-card" onclick="setRole('family')"><div class="rs-icon" style="background:var(--purple-dim);border:1.5px solid rgba(155,107,240,0.3);"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="8" cy="8" r="3" stroke="#5a3aaa" stroke-width="1.3"/><circle cx="15" cy="9" r="2.2" stroke="#5a3aaa" stroke-width="1.3"/><path d="M2 19c0-3.3 2.5-5.5 6-5.5s6 2.2 6 5.5" stroke="#5a3aaa" stroke-width="1.3" stroke-linecap="round"/><path d="M15 14.5c2 0 3.5 1.5 3.5 3.5" stroke="#5a3aaa" stroke-width="1.3" stroke-linecap="round"/></svg></div><div class="rs-title">Family view</div><div class="rs-desc">Live feed. Request nurse-approved video calls with patient.</div></div>
-      <div class="rs-card" onclick="setRole('nurse')"><div class="rs-icon" style="background:var(--amber-dim);border:1.5px solid var(--amber-border);"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="3" y="4" width="16" height="14" rx="2" stroke="#7a4a00" stroke-width="1.3"/><path d="M11 8v5M8.5 10.5h5" stroke="#7a4a00" stroke-width="1.3" stroke-linecap="round"/><path d="M7 4V3M15 4V3" stroke="#7a4a00" stroke-width="1.2" stroke-linecap="round"/></svg></div><div class="rs-title">Nurse station</div><div class="rs-desc">Alerts, timeline, and gatekeeper for family video calls.</div></div>
+      <div class="rs-card" onclick="setRole('patient')"><div class="rs-icon" style="background:var(--green-dim);border:1.5px solid var(--green-border);"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="8" r="3.5" stroke="#1e7a4e" stroke-width="1.3"/><path d="M4 20c0-3.8 3.1-6.5 7-6.5s7 2.7 7 6.5" stroke="#1e7a4e" stroke-width="1.3" stroke-linecap="round"/></svg></div><div class="rs-title">Patient room</div><div class="rs-desc">Bedside camera. Tracks awake, blinking, and sleep states via EAR detection.</div><div style="font-size:10px;color:var(--ink4);margin-top:8px;text-align:center;">${baseUrl}?role=patient</div></div>
+      <div class="rs-card" onclick="setRole('family')"><div class="rs-icon" style="background:var(--purple-dim);border:1.5px solid rgba(155,107,240,0.3);"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="8" cy="8" r="3" stroke="#5a3aaa" stroke-width="1.3"/><circle cx="15" cy="9" r="2.2" stroke="#5a3aaa" stroke-width="1.3"/><path d="M2 19c0-3.3 2.5-5.5 6-5.5s6 2.2 6 5.5" stroke="#5a3aaa" stroke-width="1.3" stroke-linecap="round"/><path d="M15 14.5c2 0 3.5 1.5 3.5 3.5" stroke="#5a3aaa" stroke-width="1.3" stroke-linecap="round"/></svg></div><div class="rs-title">Family view</div><div class="rs-desc">Live feed. Alerted when your loved one wakes or falls asleep.</div><div style="font-size:10px;color:var(--ink4);margin-top:8px;text-align:center;">${baseUrl}?role=family</div></div>
+      <div class="rs-card" onclick="setRole('nurse')"><div class="rs-icon" style="background:var(--amber-dim);border:1.5px solid var(--amber-border);"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="3" y="4" width="16" height="14" rx="2" stroke="#7a4a00" stroke-width="1.3"/><path d="M11 8v5M8.5 10.5h5" stroke="#7a4a00" stroke-width="1.3" stroke-linecap="round"/><path d="M7 4V3M15 4V3" stroke="#7a4a00" stroke-width="1.2" stroke-linecap="round"/></svg></div><div class="rs-title">Nurse station</div><div class="rs-desc">Full alert log, sleep timeline, wake & movement notifications.</div><div style="font-size:10px;color:var(--ink4);margin-top:8px;text-align:center;">${baseUrl}?role=nurse</div></div>
     </div>
-    <div class="rs-hint">Open in 3 tabs — Patient · Family · Nurse</div>
+    <div class="rs-hint">Open in 3 tabs — Patient · Family · Nurse<br><small style="color:var(--ink4);font-size:10px;">Or bookmark specific URLs for direct access</small></div>
   </div>`;
 }
 
@@ -633,11 +568,10 @@ function renderPatient(){
   const openThreshPct=Math.round(EAR_OPEN/0.4*100);
   const blinkThreshPct=Math.round(EAR_BLINK/0.4*100);
 
-  const callBanner=S.callState==='active'?`<div class="alert-banner ab-purple" style="margin-bottom:14px;"><div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:50%;background:var(--purple-dim);border:1px solid rgba(155,107,240,0.35);display:flex;align-items:center;justify-content:center;animation:breathe 1.5s infinite;"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="3" width="11" height="7" rx="1.5" stroke="var(--purple)" stroke-width="1.1"/><path d="M9 6.5l3-2v5l-3-2" stroke="var(--purple)" stroke-width="1.1" stroke-linejoin="round"/></svg></div><div><div style="font-family:'DM Serif Display',serif;font-size:16px;color:var(--ink)">Video call active</div><div style="font-size:11px;color:#5a3aaa;">Family connected</div></div></div><button class="btn btn-red" onclick="hangUp(true)">End call</button></div>`:'';
-
+  /* ── KEY CHANGE: video hidden but still sized; canvas draws the full frame ── */
   const camContent=S.isMonitoring
-    ?`<video id="pVid" autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(-1);border-radius:16px;"></video>
-       <canvas id="pCanvas" style="position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1);pointer-events:none;border-radius:16px;"></canvas>
+    ?`<video id="pVid" autoplay muted playsinline style="position:absolute;visibility:hidden;width:1px;height:1px;"></video>
+       <canvas id="pCanvas" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:16px;"></canvas>
        <div class="cam-overlay-lbl">MEDIAPIPE · ${S.patientRoom}</div>
        <div class="cam-rec"><div class="rdot"></div><span class="rtxt">LIVE</span></div>
        <div style="position:absolute;bottom:10px;right:12px;display:flex;gap:8px;align-items:center;">
@@ -650,33 +584,76 @@ function renderPatient(){
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="rgba(180,170,222,0.5)" stroke-width="1"/><polygon points="8,6 15,10 8,14" fill="rgba(180,170,222,0.7)"/></svg>
         </div>
         <div style="font-size:12px;color:rgba(180,170,222,0.5)">Start monitoring</div>
+        <div style="font-size:10px;color:rgba(180,170,222,0.35)">3-state EAR detection</div>
       </div>`;
 
   return `<div style="padding:20px 24px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-      <div><div style="font-family:'DM Serif Display',serif;font-size:26px;color:var(--ink)">${S.patientName}</div><div style="font-size:12px;color:var(--ink3);margin-top:2px">${S.patientRoom} · ${S.patientWard}</div></div>
-      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;"><span class="mp-chip ${mpCls}" id="mp-chip">${mpLbl}</span>${connChip(S.familyConnected,'Family')}${connChip(S.nurseConnected,'Nurse')}</div>
+      <div>
+        <div style="font-family:'DM Serif Display',serif;font-size:26px;color:var(--ink)">${S.patientName}</div>
+        <div style="font-size:12px;color:var(--ink3);margin-top:2px">${S.patientRoom} · ${S.patientWard}</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        <span class="mp-chip ${mpCls}" id="mp-chip">${mpLbl}</span>
+        ${connChip(S.familyConnected,'Family')}${connChip(S.nurseConnected,'Nurse')}
+      </div>
     </div>
-    ${callBanner}
+
     <div style="display:grid;grid-template-columns:1fr 252px;gap:14px;align-items:start;">
       <div style="display:flex;flex-direction:column;gap:12px;">
-        <div class="camwrap" style="min-height:268px;position:relative;">${camContent}</div>
+
+        ${S.videoCallUrl
+          ? `<div style="position:relative; width:100%; height:400px; border-radius:18px; overflow:hidden; background:#0c0a16; border: 2px solid var(--purple);">
+               <iframe allow="camera; microphone; fullscreen; display-capture; autoplay" src="${S.videoCallUrl}" style="height:100%; width:100%; border:0px;"></iframe>
+               <button class="btn btn-red" style="position:absolute; bottom:10px; right:10px; z-index:10; background:var(--red); color:white; border:none; padding:8px 16px; border-radius:10px; cursor:pointer;" onclick="S.videoCallUrl=null; S.videoCallState=null; render()">End Call</button>
+             </div>`
+          : `<div class="camwrap" style="min-height:268px;position:relative;">${camContent}</div>`
+        }
+
         <div class="gc" style="padding:15px 17px;">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
-            <div><div class="eyebrow">Eye aspect ratio</div><div class="eye-state-big ${stateClass}" id="ps-state-big">${stateLabel}</div><div id="ps-face-time" style="font-size:11px;color:var(--ink4);margin-top:3px">${S.isMonitoring?fmtDur(now()-S.sleepStateStart)+' in state':'Click start camera'}</div></div>
-            <div style="text-align:right;"><div style="font-family:'DM Mono',monospace;font-size:22px;color:var(--ink3)" id="ps-ear-val">${S.lastEAR.toFixed(3)}</div><div style="font-size:10px;color:var(--ink4)">EAR value</div></div>
+            <div>
+              <div class="eyebrow">Eye aspect ratio</div>
+              <div class="eye-state-big ${stateClass}" id="ps-state-big">${stateLabel}</div>
+              <div id="ps-face-time" style="font-size:11px;color:var(--ink4);margin-top:3px">${S.isMonitoring?fmtDur(now()-S.sleepStateStart)+' in state':'Click start camera'}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:'DM Mono',monospace;font-size:22px;color:var(--ink3)" id="ps-ear-val">${S.lastEAR.toFixed(3)}</div>
+              <div style="font-size:10px;color:var(--ink4)">EAR value</div>
+            </div>
           </div>
           <div style="position:relative;margin-bottom:18px;">
-            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink4);margin-bottom:4px;font-family:'DM Mono',monospace;"><span>0.0</span><span style="color:var(--sleep)">← sleep ·${EAR_BLINK}</span><span style="color:var(--amber)">blink ·${EAR_OPEN}</span><span style="color:var(--green)">awake →</span><span>0.4</span></div>
-            <div class="ear-bar-wrap"><div class="ear-bar-fill" id="ps-ear-fill" style="width:${earPct}%;background:#4cc98a;"></div><div class="ear-thresh-line" style="left:${blinkThreshPct}%;"></div><div class="ear-thresh-line" style="left:${openThreshPct}%;background:rgba(76,201,138,0.6);"></div></div>
-            <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--ink4);margin-top:3px;font-family:'DM Mono',monospace;"><span>eyes closed</span><span>blinking</span><span>eyes open</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink4);margin-bottom:4px;font-family:'DM Mono',monospace;">
+              <span>0.0</span><span style="color:var(--sleep)">← sleep ·${EAR_BLINK}</span><span style="color:var(--amber)">blink ·${EAR_OPEN}</span><span style="color:var(--green)">awake →</span><span>0.4</span>
+            </div>
+            <div class="ear-bar-wrap">
+              <div class="ear-bar-fill" id="ps-ear-fill" style="width:${earPct}%;background:#4cc98a;"></div>
+              <div class="ear-thresh-line" style="left:${blinkThreshPct}%;"></div>
+              <div class="ear-thresh-line" style="left:${openThreshPct}%;background:rgba(76,201,138,0.6);"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--ink4);margin-top:3px;font-family:'DM Mono',monospace;">
+              <span>eyes closed</span><span style="color:var(--ink3)">blinking</span><span>eyes open</span>
+            </div>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink3);margin-bottom:4px;"><span>Movement</span><span id="ps-motion-val" style="font-family:'DM Mono',monospace;color:${mc}">${S.motionLevel}%</span></div>
-          <div style="height:5px;background:rgba(155,107,240,0.1);border-radius:99px;overflow:hidden;margin-bottom:12px;"><div id="ps-motion-fill" style="height:100%;border-radius:99px;width:${S.motionLevel}%;background:${mc};transition:width 0.3s;"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink3);margin-bottom:4px;">
+            <span>Movement</span><span id="ps-motion-val" style="font-family:'DM Mono',monospace;color:${mc}">${S.motionLevel}%</span>
+          </div>
+          <div style="height:5px;background:rgba(155,107,240,0.1);border-radius:99px;overflow:hidden;margin-bottom:12px;">
+            <div id="ps-motion-fill" style="height:100%;border-radius:99px;width:${S.motionLevel}%;background:${mc};transition:width 0.3s;"></div>
+          </div>
         </div>
-        <div class="timeline-wrap"><div class="eyebrow">Sleep / wake timeline</div><div id="ps-timeline">${totMs<500?'<div style="font-size:11px;color:var(--ink4);font-style:italic">Timeline builds as monitoring runs…</div>':timelineHTML(segs,totMs)}</div></div>
-        <div style="display:flex;gap:8px;">${S.isMonitoring?`<button class="btn btn-primary" onclick="stopCamera()">Stop monitoring</button>`:`<button class="btn btn-primary" onclick="startCamera()">Start monitoring</button>`}<button class="btn btn-ghost" onclick="S.role=null;render()">Switch view</button></div>
+
+        <div class="timeline-wrap" id="ps-timeline-wrap">
+          <div class="eyebrow">Sleep / wake timeline</div>
+          <div id="ps-timeline">${segs.length||totMs<500?timelineHTML(segs,totMs):'<div style="font-size:11px;color:var(--ink4);font-style:italic">Timeline builds as monitoring runs…</div>'}</div>
+        </div>
+
+        <div style="display:flex;gap:8px;">
+          ${S.isMonitoring?`<button class="btn btn-primary" onclick="stopCamera()">Stop monitoring</button>`:`<button class="btn btn-primary" onclick="startCamera()">Start monitoring</button>`}
+          <button class="btn btn-ghost" onclick="S.role=null;render()">Switch view</button>
+        </div>
       </div>
+
       <div style="display:flex;flex-direction:column;gap:12px;">
         <div class="gc" style="padding:14px 16px;">
           <div class="eyebrow">Session stats</div>
@@ -690,7 +667,12 @@ function renderPatient(){
             <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--ink)" id="ps-blinks">${S.blinkCount}</div>
           </div>
         </div>
-        <div class="gc" style="padding:14px 16px;"><div class="eyebrow">Events</div><div class="ev-list" id="ps-evlist">${evHTML(S.events.slice(0,8))}</div></div>
+
+        <div class="gc" style="padding:14px 16px;">
+          <div class="eyebrow">Events</div>
+          <div class="ev-list" id="ps-evlist">${evHTML(S.events.slice(0,8))}</div>
+        </div>
+
         ${msgBox('Message family or nurse…')}
       </div>
     </div>
@@ -701,48 +683,42 @@ function renderFamily(){
   const state=S.eyeState||'unknown';
   const isAwake=state==='awake',isAsleep=state==='asleep';
   const sp=S.remoteSleepPct||0;
-  const callPending=S.callState==='pending_nurse';
-  const callActive=S.callState==='active';
-  const callApproved=S.callState==='approved';
-
-  const callSection=`<div class="gc" style="padding:14px 16px;margin-bottom:12px;">
-    <div class="eyebrow">Video call</div>
-    ${callActive
-      ?`<div style="display:flex;align-items:center;gap:10px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--green);animation:breathe 1.5s infinite;"></div><span style="font-size:13px;color:var(--ink)">Call active</span><button class="btn btn-red" style="margin-left:auto" onclick="hangUp(true)">End call</button></div>`
-      :callPending
-      ?`<div style="display:flex;align-items:center;gap:8px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--amber);animation:breathe 1.2s infinite;"></div><span style="font-size:12px;color:var(--ink3)">Waiting for nurse approval…</span></div>`
-      :callApproved
-      ?`<div style="font-size:12px;color:#1e7a4e;">Nurse approved — connecting…</div>`
-      :`<button class="btn btn-primary" onclick="requestCall()"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" style="margin-right:5px;vertical-align:middle;"><rect x="0.5" y="2" width="8" height="7" rx="1.5" stroke="white" stroke-width="1.1"/><path d="M8 5l2.5-2v5L8 6" stroke="white" stroke-width="1.1" stroke-linejoin="round"/></svg>Request video call</button>
-      <div style="font-size:11px;color:var(--ink4);margin-top:6px;">Nurse must approve before connecting.</div>`
-    }
-  </div>`;
-
   return `<div style="padding:20px 24px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
       <div><div style="font-family:'DM Serif Display',serif;font-size:26px;color:var(--ink)">Family view</div><div style="font-size:12px;color:var(--ink3);margin-top:2px">Watching ${S.patientName} · ${S.patientRoom}</div></div>
-      <div style="display:flex;gap:6px;align-items:center;">${connChip(S.patientConnected,'Patient')}${connChip(S.nurseConnected,'Nurse')}<button class="btn btn-ghost" style="padding:6px 12px;font-size:11px" onclick="S.role=null;render()">Switch</button></div>
+      <div style="display:flex;gap:6px;align-items:center;">${connChip(S.patientConnected,'Patient')}<button class="btn btn-ghost" style="padding:6px 12px;font-size:11px" onclick="S.role=null;render()">Switch</button></div>
     </div>
-    ${isAwake?`<div class="alert-banner ab-green"><div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:50%;background:var(--green-dim);border:1px solid var(--green-border);display:flex;align-items:center;justify-content:center;animation:breathe 1.5s infinite;"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="var(--green)" stroke-width="1.2"/><path d="M4 6.5l2 2 3.5-3.5" stroke="var(--green)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div style="font-family:'DM Serif Display',serif;font-size:17px;color:var(--ink)">${S.patientName} is awake</div><div style="font-size:12px;color:#1e7a4e;margin-top:1px">Eyes open detected</div></div></div></div>`:''}
-    ${isAsleep?`<div class="alert-banner ab-blue"><div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:50%;background:var(--blue-dim);border:1px solid var(--blue-border);display:flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="var(--blue)" stroke-width="1.2"/><path d="M4.5 8.5C5 7 8 7 8.5 5.5" stroke="var(--blue)" stroke-width="1.2" stroke-linecap="round"/></svg></div><div><div style="font-family:'DM Serif Display',serif;font-size:17px;color:var(--ink)">${S.patientName} is sleeping</div><div style="font-size:12px;color:#1e3e7a;margin-top:1px">Sleep confirmed</div></div></div></div>`:''}
+    ${isAwake?`<div class="alert-banner ab-green"><div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:50%;background:var(--green-dim);border:1px solid var(--green-border);display:flex;align-items:center;justify-content:center;animation:breathe 1.5s infinite;"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="var(--green)" stroke-width="1.2"/><path d="M4 6.5l2 2 3.5-3.5" stroke="var(--green)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div style="font-family:'DM Serif Display',serif;font-size:17px;color:var(--ink)">${S.patientName} is awake</div><div style="font-size:12px;color:#1e7a4e;margin-top:1px">Eyes open detected</div></div></div>${S.videoCallState===null?`<button class="btn btn-green" onclick="S.videoCallState='pending';CH.postMessage({type:'video_call_request'});render()">📹 Request call</button>`:S.videoCallState==='pending'?`<div style="font-size:12px;color:#7a4a00;padding:6px 12px;background:var(--amber-dim);border:1px solid var(--amber-border);border-radius:9px;white-space:nowrap;">Waiting for nurse…</div>`:S.videoCallState==='allowed'?`<div style="font-size:12px;color:#1e7a4e;padding:6px 12px;background:var(--green-dim);border:1px solid var(--green-border);border-radius:9px;white-space:nowrap;">✓ Call approved</div>`:`<div style="font-size:12px;color:#7a1e1e;padding:6px 12px;background:var(--red-dim);border:1px solid var(--red-border);border-radius:9px;white-space:nowrap;">Call declined</div>`}</div>`:''}
+    ${isAsleep?`<div class="alert-banner ab-blue"><div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:50%;background:var(--blue-dim);border:1px solid var(--blue-border);display:flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="var(--blue)" stroke-width="1.2"/><path d="M4.5 8.5C5 7 8 7 8.5 5.5" stroke="var(--blue)" stroke-width="1.2" stroke-linecap="round"/></svg></div><div><div style="font-family:'DM Serif Display',serif;font-size:17px;color:var(--ink)">${S.patientName} is sleeping</div><div style="font-size:12px;color:#1e3e7a;margin-top:1px">Sleep confirmed — resting quietly</div></div></div></div>`:''}
     <div style="display:grid;grid-template-columns:1fr 250px;gap:14px;align-items:start;">
       <div style="display:flex;flex-direction:column;gap:12px;">
-        ${S.lastFrame?`<div style="position:relative;"><canvas id="familyFeedCanvas" style="width:100%;border-radius:18px;display:block;min-height:240px;background:#0c0a16;"></canvas><div class="cam-overlay-lbl">LIVE · ${S.patientRoom.toUpperCase()}</div><div style="position:absolute;top:10px;right:12px;"><span class="state-badge ${{awake:'sb-awake',asleep:'sb-asleep',blinking:'sb-blink',unknown:'sb-unknown'}[state]||'sb-unknown'}">${{awake:'Awake',asleep:'Asleep',blinking:'Blinking',unknown:'—'}[state]||'—'}</span></div></div>`
-        :`<div class="camwrap" style="min-height:240px;"><div style="font-size:12px;color:rgba(180,170,222,0.4)">Waiting for patient feed</div></div>`}
+        ${S.videoCallUrl
+          ? `<div style="position:relative; width:100%; height:400px; border-radius:18px; overflow:hidden; background:#0c0a16; border: 2px solid var(--purple);">
+               <iframe allow="camera; microphone; fullscreen; display-capture; autoplay" src="${S.videoCallUrl}" style="height:100%; width:100%; border:0px;"></iframe>
+               <button class="btn btn-red" style="position:absolute; bottom:10px; right:10px; z-index:10; background:var(--red); color:white; border:none; padding:8px 16px; border-radius:10px; cursor:pointer;" onclick="S.videoCallUrl=null; S.videoCallState=null; render()">End Call</button>
+             </div>`
+          : (S.lastFrame?`<div style="position:relative;"><canvas id="familyFeedCanvas" style="width:100%;border-radius:18px;display:block;min-height:240px;background:#0c0a16;"></canvas><div class="cam-overlay-lbl">LIVE · ${S.patientRoom.toUpperCase()}</div><div style="position:absolute;top:10px;right:12px;"><span class="state-badge ${{awake:'sb-awake',asleep:'sb-asleep',blinking:'sb-blink',unknown:'sb-unknown'}[state]||'sb-unknown'}">${{awake:'Awake',asleep:'Asleep',blinking:'Blinking',unknown:'—'}[state]||'—'}</span></div></div>`
+        :`<div class="camwrap" style="min-height:240px;border-radius:18px;"><div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;"><div style="font-size:12px;color:rgba(180,170,222,0.4)">Waiting for patient feed</div></div></div>`)
+        }
         <div class="timeline-wrap"><div class="eyebrow">Sleep / wake timeline</div><div>${remoteTimelineHTML()}</div></div>
         ${msgBox('Send a message…')}
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;">
-        ${callSection}
         <div class="gc" style="padding:14px 16px;">
           <div class="sleep-grid" style="grid-template-columns:1fr 1fr;">
             <div class="stat-card"><div class="stat-val" style="font-size:18px;color:${isAwake?'var(--green)':isAsleep?'var(--sleep)':'var(--ink3)'};padding-top:3px">${{awake:'Awake',asleep:'Asleep',blinking:'Blinking',unknown:'—'}[state]||'—'}</div><div class="stat-lbl">State</div></div>
             <div class="stat-card"><div class="stat-val" style="font-size:18px;padding-top:3px">${sp}%</div><div class="stat-lbl">Sleep%</div></div>
           </div>
-          <div class="eyebrow" style="margin-top:10px;">Notifications</div>
-          <div style="max-height:220px;overflow-y:auto;">
+          <div style="display:flex;align-items:center;gap:7px;padding:8px 10px;background:rgba(155,107,240,0.06);border-radius:9px;margin-top:0;margin-bottom:12px;">
+            <div style="width:6px;height:6px;border-radius:50%;background:${isAwake?'var(--green)':isAsleep?'var(--sleep)':'var(--ink4)'}"></div>
+            <div style="font-size:12px;color:var(--ink)">${isAwake?'Awake and alert':isAsleep?'Sleeping peacefully':state==='blinking'?'Drowsy / blinking':'Waiting for signal'}</div>
+          </div>
+          <div class="eyebrow">Notifications</div>
+          <div style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;">
             ${S.notifications.length===0?'<div style="font-size:11px;color:var(--ink4);font-style:italic">No alerts yet.</div>'
-            :S.notifications.slice(0,8).map(n=>{const isS=n.type==='sleep';const col=isS?'var(--sleep)':'var(--green)';return `<div class="gc notif-card"><div class="notif-icon" style="background:${col}22;border:1px solid ${col}55;"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="${col}" stroke-width="1.1"/></svg></div><div><div style="font-size:12px;color:var(--ink);font-weight:500">${n.title}</div><div style="font-size:11px;color:var(--ink3)">${n.sub}</div></div></div>`;}).join('')}
+            :S.notifications.slice(0,8).map(n=>{
+              const isS=n.type==='sleep';const col=isS?'var(--sleep)':'var(--green)';
+              return `<div class="gc notif-card"><div class="notif-icon" style="background:${col}22;border:1px solid ${col}55;"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="${col}" stroke-width="1.1"/>${isS?'<path d="M3.5 7C4 5.5 7 5.5 7.5 4" stroke="'+col+'" stroke-width="1.1" stroke-linecap="round"/>':`<path d="M3.5 5.5l1.5 1.5 2.5-2.5" stroke="${col}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>`}</svg></div><div><div style="font-size:12px;color:var(--ink);font-weight:500">${n.title}</div><div style="font-size:11px;color:var(--ink3)">${n.sub}</div><div style="font-size:10px;color:var(--ink4);margin-top:1px">${n.ts}</div></div></div>`;}).join('')}
           </div>
         </div>
         <div class="gc" style="padding:14px 16px;"><div class="eyebrow">Recent events</div><div class="ev-list">${evHTML((S.events||[]).slice(0,5))}</div></div>
@@ -753,53 +729,43 @@ function renderFamily(){
 
 function renderNurse(){
   const state=S.eyeState||'unknown';
-  const isAwake=state==='awake';
-  const hiM=S.motionLevel>MOTION_HIGH,medM=S.motionLevel>MOTION_ALERT;
+  const isAwake=state==='awake'&&!S.nurseBannerDismissed,isAsleepBanner=state==='asleep';
+  const isAsleep=state==='asleep';
+  const hiM=S.motionLevel>MOTION_HIGH && Date.now() > S.nurseMotionCooldown;
+  const medM=S.motionLevel>MOTION_ALERT;
   const unacked=(S.nurseNotifications||[]).filter(n=>!n.acked);
   const mc=hiM?'#f06060':medM?'#f0a500':'#4cc98a';
   const sp=S.remoteSleepPct||0;
   const slpMs=S.remoteSleepMs||0;
-
-  /* pending call requests */
-  const pendingCallReqs=(S.nurseNotifications||[]).filter(n=>n.type==='vcall_req'&&!n.acked);
-
-  const callReqBanners=pendingCallReqs.map(n=>`
-    <div class="call-req-banner">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:34px;height:34px;border-radius:50%;background:var(--purple-dim);border:1px solid rgba(155,107,240,0.4);display:flex;align-items:center;justify-content:center;animation:breathe 1.5s infinite;">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="3" width="9" height="7" rx="1.5" stroke="var(--purple)" stroke-width="1.1"/><path d="M10 6l3-2v5l-3-2" stroke="var(--purple)" stroke-width="1.1" stroke-linejoin="round"/></svg>
-        </div>
-        <div>
-          <div style="font-family:'DM Serif Display',serif;font-size:16px;color:var(--ink)">Family requests video call</div>
-          <div style="font-size:11px;color:var(--ink3);">${S.patientName} · ${n.ts}</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-green" onclick="nurseApproveCall('${n.callId}')">Approve</button>
-        <button class="btn btn-red" onclick="nurseDenyCall('${n.callId}')">Deny</button>
-      </div>
-    </div>`).join('');
-
   return `<div style="padding:20px 24px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
       <div><div style="font-family:'DM Serif Display',serif;font-size:26px;color:var(--ink)">Nurse station</div><div style="font-size:12px;color:var(--ink3);margin-top:2px">${unacked.length?`<span style="color:#7a4a00;font-weight:500">${unacked.length} unacknowledged</span>`:'All clear'}</div></div>
-      <div style="display:flex;gap:6px;align-items:center;">${connChip(S.patientConnected,'Patient')}${connChip(S.familyConnected,'Family')}<button class="btn btn-ghost" style="padding:6px 12px;font-size:11px" onclick="S.role=null;render()">Switch</button></div>
+      <div style="display:flex;gap:6px;align-items:center;">${connChip(S.patientConnected,'Patient')}<button class="btn btn-ghost" style="padding:6px 12px;font-size:11px" onclick="S.role=null;render()">Switch</button></div>
     </div>
-    ${callReqBanners}
-    ${isAwake?`<div class="alert-banner ab-green"><div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:50%;background:var(--green-dim);border:1px solid var(--green-border);display:flex;align-items:center;justify-content:center;animation:breathe 1.5s infinite;"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="var(--green)" stroke-width="1.1"/><path d="M4 6.5l2 2 3.5-3.5" stroke="var(--green)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div style="font-family:'DM Serif Display',serif;font-size:16px;color:var(--ink)">${S.patientName} — awake</div><div style="font-size:11px;color:#1e7a4e;">Patient may need attention</div></div></div><button class="btn btn-green" onclick="S.nurseAlerted=false;render()">Acknowledge</button></div>`:''}
+    ${isAwake?`<div class="alert-banner ab-green"><div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:50%;background:var(--green-dim);border:1px solid var(--green-border);display:flex;align-items:center;justify-content:center;animation:breathe 1.5s infinite;"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="var(--green)" stroke-width="1.1"/><path d="M4 6.5l2 2 3.5-3.5" stroke="var(--green)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div style="font-family:'DM Serif Display',serif;font-size:16px;color:var(--ink)">${S.patientName} — awake</div><div style="font-size:11px;color:#1e7a4e;">Patient may need attention</div></div></div><button class="btn btn-green" onclick="S.nurseBannerDismissed=true;S.nurseNotifications.filter(n=>n.type==='eye').forEach(n=>n.acked=true);render()">Acknowledge</button></div>`:''}
     ${hiM?`<div class="alert-banner ab-amber"><div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:50%;background:var(--amber-dim);border:1px solid var(--amber-border);display:flex;align-items:center;justify-content:center;animation:breathe 1.4s infinite;"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1.5L12 11H1L6.5 1.5z" stroke="var(--amber)" stroke-width="1.1" stroke-linejoin="round"/><path d="M6.5 5.5v2.5M6.5 9.5v.5" stroke="var(--amber)" stroke-width="1.2" stroke-linecap="round"/></svg></div><div><div style="font-family:'DM Serif Display',serif;font-size:16px;color:var(--ink)">${S.patientName} — high movement (${S.motionLevel}%)</div><div style="font-size:11px;color:#7a4a00;">May be in distress</div></div></div><button class="btn btn-amber" onclick="S.nurseMotionCooldown=Date.now()+30000;render()">Acknowledge</button></div>`:''}
 
     <div style="display:grid;grid-template-columns:1fr 260px;gap:14px;align-items:start;">
       <div style="display:flex;flex-direction:column;gap:12px;">
-        ${S.lastFrame?`<div style="position:relative;"><canvas id="nurseFeedCanvas" style="width:100%;border-radius:18px;display:block;min-height:230px;background:#0c0a16;"></canvas><div class="cam-overlay-lbl">LIVE · ${S.patientRoom.toUpperCase()}</div><div style="position:absolute;top:10px;right:12px;"><span class="state-badge ${{awake:'sb-awake',asleep:'sb-asleep',blinking:'sb-blink',unknown:'sb-unknown'}[state]||'sb-unknown'}">${{awake:'Awake',asleep:'Asleep',blinking:'Blinking',unknown:'—'}[state]||'—'}</span></div></div>`
-        :`<div class="camwrap" style="min-height:230px;"><div style="font-size:12px;color:rgba(180,170,222,0.4)">Waiting for patient feed</div></div>`}
+        ${S.videoCallUrl
+          ? `<div style="position:relative; width:100%; height:400px; border-radius:18px; overflow:hidden; background:#0c0a16; border: 2px solid var(--purple);">
+               <iframe allow="camera; microphone; fullscreen; display-capture; autoplay" src="${S.videoCallUrl}" style="height:100%; width:100%; border:0px;"></iframe>
+               <button class="btn btn-red" style="position:absolute; bottom:10px; right:10px; z-index:10; background:var(--red); color:white; border:none; padding:8px 16px; border-radius:10px; cursor:pointer;" onclick="S.videoCallUrl=null; S.videoCallState=null; render()">End Call</button>
+             </div>`
+          : (S.lastFrame?`<div style="position:relative;"><canvas id="nurseFeedCanvas" style="width:100%;border-radius:18px;display:block;min-height:230px;background:#0c0a16;"></canvas><div class="cam-overlay-lbl">LIVE · ${S.patientRoom.toUpperCase()}</div><div style="position:absolute;top:10px;right:12px;"><span class="state-badge ${{awake:'sb-awake',asleep:'sb-asleep',blinking:'sb-blink',unknown:'sb-unknown'}[state]||'sb-unknown'}">${{awake:'Awake',asleep:'Asleep',blinking:'Blinking',unknown:'—'}[state]||'—'}</span></div></div>`
+        :`<div class="camwrap" style="min-height:230px;border-radius:18px;"><div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;"><div style="font-size:12px;color:rgba(180,170,222,0.4)">Waiting for patient feed</div></div></div>`)
+        }
         <div class="gc" style="padding:14px 16px;">
           <div class="eyebrow">Live status</div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;">
-            <div class="stat-card"><div class="stat-val" style="font-size:17px;padding-top:3px;color:${isAwake?'var(--green)':state==='asleep'?'var(--sleep)':'var(--ink3)'}">${{awake:'Open',asleep:'Asleep',blinking:'Drowsy',unknown:'—'}[state]||'—'}</div><div class="stat-lbl">Eyes</div></div>
+            <div class="stat-card"><div class="stat-val" style="font-size:17px;padding-top:3px;color:${isAwake?'var(--green)':isAsleep?'var(--sleep)':'var(--ink3)'}">${{awake:'Open',asleep:'Asleep',blinking:'Drowsy',unknown:'—'}[state]||'—'}</div><div class="stat-lbl">Eyes</div></div>
             <div class="stat-card"><div class="stat-val" style="font-size:17px;padding-top:3px;color:${mc}">${S.motionLevel}%</div><div class="stat-lbl">Motion</div></div>
             <div class="stat-card"><div class="stat-val" style="font-size:17px;padding-top:3px;color:var(--sleep)">${fmtDur(slpMs)}</div><div class="stat-lbl">Sleep</div></div>
             <div class="stat-card"><div class="stat-val" style="font-size:17px;padding-top:3px;color:var(--green)">${sp}%</div><div class="stat-lbl">Sleep%</div></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink3);margin-bottom:4px;"><span>Movement</span><span style="font-family:'DM Mono',monospace;color:${mc}">${S.motionLevel}%</span></div>
+          <div style="height:5px;background:rgba(155,107,240,0.1);border-radius:99px;overflow:hidden;">
+            <div style="height:100%;border-radius:99px;width:${S.motionLevel}%;background:${mc};transition:width 0.3s;"></div>
           </div>
         </div>
         <div class="timeline-wrap"><div class="eyebrow">Sleep / wake timeline</div><div>${remoteTimelineHTML()}</div></div>
@@ -808,25 +774,8 @@ function renderNurse(){
       <div style="display:flex;flex-direction:column;gap:12px;">
         <div class="gc" style="padding:14px 16px;">
           <div class="eyebrow">Alert log</div>
-          <div style="max-height:320px;overflow-y:auto;">
-            ${S.nurseNotifications.length===0?'<div style="font-size:11px;color:var(--ink4);font-style:italic;padding:8px 0">Alerts appear here.</div>'
-            :S.nurseNotifications.slice(0,16).map((n,idx)=>{
-              const col=n.type==='eye'?'var(--green)':n.type==='sleep'?'var(--sleep)':n.type==='vcall_req'?'var(--purple)':n.priority==='high'?'var(--red)':'var(--amber)';
-              const priCls={high:'pri-high',medium:'pri-med',low:'pri-low'}[n.priority]||'pri-med';
-              return `<div class="gc notif-card" style="${n.acked?'opacity:0.45':''}">
-                <div class="notif-icon" style="background:${col}22;border:1px solid ${col}55;"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4" stroke="${col}" stroke-width="1.1"/></svg></div>
-                <div style="flex:1;">
-                  <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:2px;">
-                    <div style="font-size:12px;color:var(--ink);font-weight:500">${n.title}</div>
-                    <span class="pri-badge ${priCls}">${n.priority||'info'}</span>
-                  </div>
-                  <div style="font-size:11px;color:var(--ink3)">${n.sub}</div>
-                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
-                    <div style="font-size:10px;color:var(--ink4)">${n.ts}</div>
-                    ${!n.acked&&n.type!=='vcall_req'?`<button onclick="S.nurseNotifications[${idx}].acked=true;render()" style="font-size:10px;padding:2px 8px;border:1px solid rgba(155,107,240,0.25);border-radius:6px;background:none;color:var(--ink3);cursor:pointer;">Ack</button>`:''}
-                  </div>
-                </div>
-              </div>`;}).join('')}
+          <div style="max-height:300px;overflow-y:auto;">
+            ${(()=>{const visible=S.nurseNotifications.filter(n=>!n.acked);if(!visible.length)return '<div style="font-size:11px;color:var(--ink4);font-style:italic;padding:8px 0">No active alerts.</div>';return visible.slice(0,14).map(n=>{const isVC=n.type==='videocall';const col=isVC?'var(--purple)':n.type==='eye'?'var(--green)':n.type==='sleep'?'var(--sleep)':n.priority==='high'?'var(--red)':'var(--amber)';const priCls={high:'pri-high',medium:'pri-med',low:'pri-low'}[n.priority]||'pri-info';const idx=S.nurseNotifications.indexOf(n);return `<div class="gc notif-card"><div class="notif-icon" style="background:${col}22;border:1px solid ${col}55;"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4" stroke="${col}" stroke-width="1.1"/></svg></div><div style="flex:1;"><div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:2px;"><div style="font-size:12px;color:var(--ink);font-weight:500">${n.title}</div><span class="pri-badge ${priCls}">${n.priority}</span></div><div style="font-size:11px;color:var(--ink3)">${n.sub}</div><div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">${isVC?`<div style="display:flex;gap:6px;"><button onclick="S.nurseNotifications[${idx}].acked=true; const roomName = 'VigilDemo_' + Math.floor(Math.random() * 100000); const jitsiUrl = 'https://meet.jit.si/' + roomName; S.videoCallUrl = jitsiUrl; CH.postMessage({type:'video_call_response', allowed:true, roomUrl: jitsiUrl}); render();" style="font-size:11px;padding:4px 12px;border:none;border-radius:7px;background:linear-gradient(135deg,#4cc98a,#2ea866);color:white;cursor:pointer;font-family:'Outfit',sans-serif;">Allow</button><button onclick="S.nurseNotifications[${idx}].acked=true;CH.postMessage({type:'video_call_response',allowed:false});render()" style="font-size:11px;padding:4px 12px;border:1px solid var(--red-border);border-radius:7px;background:var(--red-dim);color:#7a1e1e;cursor:pointer;font-family:'Outfit',sans-serif;">Reject</button></div>`:`<div style="font-size:10px;color:var(--ink4)">${n.ts}</div><button onclick="S.nurseNotifications[${idx}].acked=true;render()" style="font-size:10px;padding:2px 8px;border:1px solid rgba(155,107,240,0.25);border-radius:6px;background:none;color:var(--ink3);cursor:pointer;">Dismiss</button>`}</div></div></div>`;}).join('');})()}
           </div>
         </div>
         <div class="gc" style="padding:14px 16px;"><div class="eyebrow">Event log</div><div class="ev-list">${evHTML((S.events||[]).slice(0,7))}</div></div>
@@ -841,13 +790,11 @@ function render(){
   const app=document.getElementById('app');if(!app)return;
   const rpCls={patient:'rp-patient',family:'rp-family',nurse:'rp-nurse'}[S.role]||'rp-patient';
   const rpLbl={patient:'Patient room',family:'Family view',nurse:'Nurse station'}[S.role]||'';
-  const unackCount=(S.nurseNotifications||[]).filter(n=>!n.acked).length;
   const stateSnippet=S.role==='patient'&&S.isMonitoring
     ?`<div class="pulse-dot pd-green"></div><span>${{awake:'Awake',asleep:'Asleep',blinking:'Blinking',unknown:'Detecting'}[S.sleepState]||'Live'}</span>`
-    :S.role==='nurse'&&unackCount?`<div class="pulse-dot pd-amber"></div><span>${unackCount} unacked</span>`
-    :S.role==='family'&&S.eyeState==='awake'?`<div class="pulse-dot pd-green"></div><span>Awake</span>`
-    :S.role==='family'&&S.eyeState==='asleep'?`<div class="pulse-dot pd-blue"></div><span>Sleeping</span>`
-    :S.role==='family'&&S.callState==='pending_nurse'?`<div class="pulse-dot pd-amber"></div><span>Call pending</span>`:'';
+    :S.role==='nurse'&&(S.nurseNotifications||[]).filter(n=>!n.acked).length
+    ?`<div class="pulse-dot pd-amber"></div><span>${(S.nurseNotifications||[]).filter(n=>!n.acked).length} unacked</span>`
+    :S.role==='family'&&S.eyeState==='awake'?`<div class="pulse-dot pd-green"></div><span>Awake</span>`:S.role==='family'&&S.eyeState==='asleep'?`<div class="pulse-dot pd-blue"></div><span>Sleeping</span>`:'';
   const nav=S.role?`<nav class="topbar"><div class="logo" onclick="S.role=null;render()"><div class="logo-mark"></div><span class="logo-text">Vigil</span></div><div class="role-pill ${rpCls}">${rpLbl}</div><div class="tb-right">${stateSnippet}</div></nav>`:'';
   let body='';
   if(!S.role)body=renderRoleSelect();
@@ -857,13 +804,20 @@ function render(){
   app.innerHTML=nav+body;
   if(S.role==='family'&&S.lastFrame)setTimeout(()=>drawFeedFrame('familyFeedCanvas'),50);
   if(S.role==='nurse'&&S.lastFrame)setTimeout(()=>drawFeedFrame('nurseFeedCanvas'),50);
-  if(S.role)setTimeout(()=>{const ml=document.getElementById('msg-list');if(ml)ml.scrollTop=ml.scrollHeight;},60);
+  if((S.role==='family'||S.role==='nurse'))setTimeout(()=>{const ml=document.getElementById('msg-list');if(ml)ml.scrollTop=ml.scrollHeight;},60);
   updateMpChip();
-  /* re-attach call overlay if active */
-  if(S.callState==='active'&&(S.role==='patient'||S.role==='family'))showCallUI();
 }
 
 render();
 setInterval(()=>{if(S.role)CH.postMessage({type:'ping',from:S.role});},4000);
 setInterval(()=>{if(S.role==='patient'&&S.isMonitoring)updatePatientLive();},1000);
+
+/* ── URL Parameter Auto-Role Selection ── */
+const urlParams = new URLSearchParams(window.location.search);
+const roleParam = urlParams.get('role');
+if (roleParam && ['patient', 'family', 'nurse'].includes(roleParam) && !S.role) {
+  setRole(roleParam);
+}
 </script>
+</body>
+</html>

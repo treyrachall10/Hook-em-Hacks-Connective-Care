@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "run": "start vigil.html",
+    "run": "http-server . -p 8080 --cors",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -15,6 +15,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.0",
+    "http-server": "^14.1.1",
     "vite": "^5.4.0"
   }
 }
