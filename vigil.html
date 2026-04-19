@@ -169,12 +169,32 @@ body{font-family:'Outfit',sans-serif;background:var(--canvas);color:var(--ink);}
 
 /* Gauge circle */
 .gauge-svg{overflow:visible;}
+
+/* Mic button */
+.mic-btn{width:34px;height:34px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.18s;flex-shrink:0;}
+.mic-btn-idle{background:rgba(155,107,240,0.12);border:1px solid rgba(155,107,240,0.25);}
+.mic-btn-idle:hover{background:rgba(155,107,240,0.22);}
+.mic-btn-recording{background:var(--red-dim);border:1px solid var(--red-border);animation:breathe 0.8s infinite;}
+.mic-btn-processing{background:var(--amber-dim);border:1px solid var(--amber-border);}
+.tts-chip{font-size:9.5px;padding:2px 7px;border-radius:99px;font-family:'DM Mono',monospace;background:var(--blue-dim);border:1px solid var(--blue-border);color:#1e3e7a;display:inline-flex;align-items:center;gap:3px;}
+.ping-banner{position:fixed;top:60px;right:16px;z-index:999;padding:13px 18px;border-radius:14px;background:rgba(255,255,255,0.95);border:2px solid var(--green-border);box-shadow:0 8px 32px rgba(76,201,138,0.2);display:flex;align-items:center;gap:10px;max-width:280px;animation:slideIn 0.3s ease;}
+@keyframes slideIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
 </style>
 
 <div class="app" id="app"></div>
 
 <script>
 const CH=new BroadcastChannel('vigil_v4');
+
+/* ── API Configuration ── */
+const CONFIG = {
+  GEMINI_API_KEY: 'put ai key here',
+  ELEVENLABS_API_KEY: 'put api key here',
+  ELEVENLABS_VOICE_ID: 'EXAVITQu4vr4xnSDxMaL', // "Sarah" — calm & clear
+  BACKEND_URL: 'http://localhost:8000',
+  PATIENT_ID: 1, // adjust per patient
+};
+
 
 /* ── EAR landmarks ── */
 const LEFT_EYE=[362,385,387,263,373,380];
@@ -191,7 +211,7 @@ const MOTION_HIGH=60;
 
 /* ── State ── */
 const S={
-  role:null,patientName:'George P.',patientRoom:'Room 1',patientWard:'ICU',
+  role:null,patientName:'Patient.',patientRoom:'Room 1',patientWard:'ICU',
   isMonitoring:false,mpStatus:'idle',
   eyeState:'unknown',confidence:0,lastEAR:0,earHistory:[],earSmooth:0,
   lidStart:null,lidOpen:true,blinkCount:0,
@@ -316,14 +336,15 @@ CH.onmessage=e=>{
   if(d.type==='state_update'&&(S.role==='family'||S.role==='nurse')){
     Object.assign(S,{eyeState:d.eyeState,confidence:d.confidence,lastEAR:d.lastEAR,alertsToday:d.alertsToday,motionAlertsToday:d.motionAlertsToday,events:d.events,motionLevel:d.motionLevel,remoteSegments:d.segments,remoteSleepMs:d.totalSleepMs,remoteAwakeMs:d.totalAwakeMs,remoteSessionMs:d.sessionMs,remoteBlinkCount:d.blinkCount,remoteSleepPct:d.sleepPct});
     if(S.role==='family'){
-      if(d.eyeState==='awake'&&!S.familyAlerted){S.familyAlerted=true;S.notifications.unshift({id:now(),title:S.patientName+' is awake',sub:'Eyes open · '+tsShort(),color:'var(--green)',ts:tsShort(),type:'awake'});playTone([880,880,1100]);}
+      if(d.eyeState==='awake'&&!S.familyAlerted){S.familyAlerted=true;S.notifications.unshift({id:now(),title:S.patientName+' is awake',sub:'Eyes open · '+tsShort(),color:'var(--green)',ts:tsShort(),type:'awake'});playPingAlert();showPingBanner(S.patientName);}
       if(d.eyeState==='asleep'&&S.familyAlerted){S.familyAlerted=false;S.videoCallState=null;S.notifications.unshift({id:now(),title:S.patientName+' fell asleep',sub:'Sleep detected · '+tsShort(),color:'var(--blue)',ts:tsShort(),type:'sleep'});}
     }
     if(S.role==='nurse'){
       if(d.eyeState==='awake'&&S._prevEyeState!=='awake'&&!S.nurseAlerted){
         S.nurseAlerted=true;
         S.nurseNotifications.unshift({id:now(),type:'eye',title:'Awake — '+S.patientName,sub:S.patientRoom+' · '+tsShort(),priority:'medium',ts:tsShort()});
-        playTone([660,880]);
+        playPingAlert();
+        showPingBanner(S.patientName);
       }
       if(d.eyeState==='asleep'&&S._prevEyeState!=='asleep'){
         S.nurseAlerted=false;
@@ -348,8 +369,11 @@ CH.onmessage=e=>{
   }
   if(d.type==='chat'){
     const lbl={patient:'Patient',family:'Family',nurse:'Nurse'}[d.from]||d.from;
-    /* CHANGE: We now store the exact role that sent it (d.from), instead of checking isMine */
     S.messages.push({from:d.from,label:lbl,text:d.text,time:d.time});
+    // Patient side: read incoming messages aloud via ElevenLabs
+    if(S.role==='patient' && d.from !== 'patient'){
+      speakText(`${lbl} says: ${d.text}`);
+    }
     updateChatDOM(); 
   }
   if(d.type==='video_call_request'&&S.role==='nurse'){
@@ -381,6 +405,163 @@ function handlePong(from){
 function playTone(freqs){
   try{const ctx=new AudioContext();freqs.forEach((f,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=f;const t=ctx.currentTime+i*0.18;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.25,t+0.04);g.gain.linearRampToValueAtTime(0,t+0.2);o.start(t);o.stop(t+0.2);});}catch(e){}
 }
+
+/* ── Ping Alert Sound (patient awake) ── */
+function playPingAlert(){
+  try{
+    const ctx=new AudioContext();
+    // Warm bell-like ping — two harmonics
+    [880,1320,1760].forEach((f,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type='sine';o.connect(g);g.connect(ctx.destination);
+      o.frequency.value=f;
+      const t=ctx.currentTime+i*0.05;
+      g.gain.setValueAtTime(0,t);
+      g.gain.linearRampToValueAtTime(0.35/(i+1),t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.001,t+1.2);
+      o.start(t);o.stop(t+1.3);
+    });
+  }catch(e){}
+}
+
+/* ── Backend API ── */
+async function backendSaveMessage(text, senderRole){
+  try{
+    const res = await fetch(`${CONFIG.BACKEND_URL}/patients/${CONFIG.PATIENT_ID}/messages/`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        sender: senderRole,
+        content: text,
+        patient_id: CONFIG.PATIENT_ID,
+      })
+    });
+    if(!res.ok) console.warn('Backend message save failed:', res.status);
+  } catch(e){ console.warn('Backend unreachable:', e.message); }
+}
+
+/* ── Gemini Speech-to-Text ── */
+let _mediaRecorder = null;
+let _audioChunks = [];
+let _sttActive = false;
+
+async function startSTT(){
+  if(_sttActive) return stopSTT();
+  if(CONFIG.GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE'){
+    alert('Set your Gemini API key in CONFIG.GEMINI_API_KEY');return;
+  }
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    _audioChunks = [];_sttActive = true;
+    _mediaRecorder = new MediaRecorder(stream, {mimeType:'audio/webm'});
+    _mediaRecorder.ondataavailable = e => { if(e.data.size>0) _audioChunks.push(e.data); };
+    _mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(t=>t.stop());
+      const blob = new Blob(_audioChunks, {type:'audio/webm'});
+      updateMicBtn('processing');
+      const transcribed = await geminiTranscribe(blob);
+      if(transcribed){
+        const inp = document.getElementById('msg-input');
+        if(inp) inp.value = transcribed;
+      }
+      updateMicBtn('idle');_sttActive = false;
+    };
+    _mediaRecorder.start();
+    updateMicBtn('recording');
+  } catch(e){ console.error('STT error:', e); _sttActive=false; updateMicBtn('idle'); }
+}
+
+function stopSTT(){
+  if(_mediaRecorder && _mediaRecorder.state !== 'inactive') _mediaRecorder.stop();
+  _sttActive = false;
+}
+
+async function geminiTranscribe(audioBlob){
+  try{
+    const reader = new FileReader();
+    const b64 = await new Promise((res,rej)=>{
+      reader.onloadend=()=>res(reader.result.split(',')[1]);
+      reader.onerror=rej;
+      reader.readAsDataURL(audioBlob);
+    });
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CONFIG.GEMINI_API_KEY}`,
+      { method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          contents:[{parts:[
+            {inline_data:{mime_type:'audio/webm',data:b64}},
+            {text:'Transcribe the spoken words exactly. Return only the transcription, no punctuation changes, no commentary.'}
+          ]}]
+        })
+      }
+    );
+    const data = await resp.json();
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+  } catch(e){ console.error('Gemini STT error:', e); return ''; }
+}
+
+function updateMicBtn(state){
+  const btn = document.getElementById('mic-btn');if(!btn)return;
+  const icons = {
+    idle:`<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4.5" y="1" width="5" height="7.5" rx="2.5" stroke="var(--ink3)" stroke-width="1.2"/><path d="M2 7c0 2.76 2.24 5 5 5s5-2.24 5-5" stroke="var(--ink3)" stroke-width="1.2" stroke-linecap="round"/><line x1="7" y1="12" x2="7" y2="14" stroke="var(--ink3)" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    recording:`<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4.5" y="1" width="5" height="7.5" rx="2.5" fill="var(--red)" stroke="var(--red)" stroke-width="1.2"/><path d="M2 7c0 2.76 2.24 5 5 5s5-2.24 5-5" stroke="var(--red)" stroke-width="1.2" stroke-linecap="round"/><line x1="7" y1="12" x2="7" y2="14" stroke="var(--red)" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    processing:`<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5" stroke="var(--amber)" stroke-width="1.2" stroke-dasharray="3 2"/></svg>`
+  };
+  btn.innerHTML = icons[state]||icons.idle;
+  btn.className = `mic-btn mic-btn-${state==='recording'?'recording':state==='processing'?'processing':'idle'}`;
+  btn.title = state==='recording'?'Click to stop recording':state==='processing'?'Transcribing…':'Click to speak';
+}
+
+/* ── ElevenLabs Text-to-Speech (patient side only) ── */
+let _ttsQueue = [];
+let _ttsPlaying = false;
+
+async function speakText(text){
+  if(CONFIG.ELEVENLABS_API_KEY === 'YOUR_ELEVENLABS_API_KEY_HERE') return;
+  _ttsQueue.push(text);
+  if(!_ttsPlaying) drainTTSQueue();
+}
+
+async function drainTTSQueue(){
+  if(!_ttsQueue.length){_ttsPlaying=false;return;}
+  _ttsPlaying = true;
+  const text = _ttsQueue.shift();
+  try{
+    const resp = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${CONFIG.ELEVENLABS_VOICE_ID}`,
+      { method:'POST',
+        headers:{'xi-api-key':CONFIG.ELEVENLABS_API_KEY,'Content-Type':'application/json','Accept':'audio/mpeg'},
+        body: JSON.stringify({text, model_id:'eleven_turbo_v2', voice_settings:{stability:0.5,similarity_boost:0.75}})
+      }
+    );
+    if(!resp.ok) throw new Error('ElevenLabs error '+resp.status);
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.onended = ()=>{ URL.revokeObjectURL(url); drainTTSQueue(); };
+    audio.onerror = ()=>{ URL.revokeObjectURL(url); drainTTSQueue(); };
+    await audio.play();
+  } catch(e){ console.warn('TTS error:', e); drainTTSQueue(); }
+}
+
+/* ── Ping notification display ── */
+function showPingBanner(name){
+  // Remove existing ping banner
+  const old = document.getElementById('ping-banner');if(old)old.remove();
+  const banner = document.createElement('div');
+  banner.id='ping-banner';banner.className='ping-banner';
+  banner.innerHTML=`
+    <div style="width:34px;height:34px;border-radius:50%;background:var(--green-dim);border:1px solid var(--green-border);display:flex;align-items:center;justify-content:center;animation:breathe 1.2s infinite;flex-shrink:0;">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="var(--green)" stroke-width="1.2"/><path d="M4.5 7l2 2 3.5-3.5" stroke="var(--green)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div><div style="font-size:13px;font-weight:600;color:var(--ink)">${name} is awake</div><div style="font-size:11px;color:#1e7a4e">Patient may need attention</div></div>
+    <button onclick="document.getElementById('ping-banner').remove()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--ink3);font-size:16px;line-height:1;padding:0 2px;">×</button>
+  `;
+  document.body.appendChild(banner);
+  setTimeout(()=>{ const b=document.getElementById('ping-banner');if(b)b.remove(); },8000);
+}
+
 
 function loadMediaPipe(){
   return new Promise((res,rej)=>{
@@ -483,11 +664,13 @@ function sendMsg(){
   const inp=document.getElementById('msg-input');if(!inp||!inp.value.trim())return;
   const text=inp.value.trim(),time=tsShort();inp.value='';
   const lbl={patient:'Patient',family:'Family',nurse:'Nurse'}[S.role];
-  /* CHANGE: We now store the exact role that sent it (S.role), instead of hardcoding 'me' */
   S.messages.push({from:S.role,label:lbl,text,time});
   CH.postMessage({type:'chat',from:S.role,text,time});
+  // Save to backend
+  backendSaveMessage(text, S.role);
   updateChatDOM();
 }
+
 
 function updatePatientLive(){
   const el=id=>document.getElementById(id);
@@ -568,7 +751,11 @@ function msgListHTML(){
   }).join('');
 }
 
-function msgBox(placeholder){return `<div class="gc" style="padding:13px 15px;"><div class="eyebrow">Messages</div><div class="msg-list" id="msg-list">${msgListHTML()}</div><div class="msg-row"><input class="msg-inp" id="msg-input" placeholder="${placeholder}" onkeydown="if(event.key==='Enter')sendMsg()"/><button class="btn btn-primary" style="padding:8px 12px" onclick="sendMsg()"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M10 1L4.5 6M10 1L7 10L4.5 6M10 1L1 4L4.5 6" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div>`;}
+function msgBox(placeholder){
+  const isTTSActive = S.role==='patient';
+  const ttsChip = isTTSActive ? `<span class="tts-chip" title="Incoming messages will be read aloud"><svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1 3h2l2-2v8L3 7H1V3z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/><path d="M6.5 2.5c.8.8.8 3.2 0 4M7.8 1.2C9.4 2.8 9.4 6.2 7.8 7.8" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>TTS</span>` : '';
+  return `<div class="gc" style="padding:13px 15px;"><div class="eyebrow" style="display:flex;align-items:center;gap:7px;">Messages ${ttsChip}</div><div class="msg-list" id="msg-list">${msgListHTML()}</div><div class="msg-row"><button class="mic-btn mic-btn-idle" id="mic-btn" onclick="startSTT()" title="Click to speak"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4.5" y="1" width="5" height="7.5" rx="2.5" stroke="var(--ink3)" stroke-width="1.2"/><path d="M2 7c0 2.76 2.24 5 5 5s5-2.24 5-5" stroke="var(--ink3)" stroke-width="1.2" stroke-linecap="round"/><line x1="7" y1="12" x2="7" y2="14" stroke="var(--ink3)" stroke-width="1.2" stroke-linecap="round"/></svg></button><input class="msg-inp" id="msg-input" placeholder="${placeholder}" onkeydown="if(event.key==='Enter')sendMsg()"/><button class="btn btn-primary" style="padding:8px 12px" onclick="sendMsg()"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M10 1L4.5 6M10 1L7 10L4.5 6M10 1L1 4L4.5 6" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div>`;
+}
 
 function remoteTimelineHTML(){
   const segs=S.remoteSegments||[];const totMs=S.remoteSessionMs||0;
@@ -817,7 +1004,31 @@ function renderNurse(){
   </div>`;
 }
 
-function setRole(r){S.role=r;CH.postMessage({type:'ping',from:r});render();}
+function setRole(r){S.role=r;CH.postMessage({type:'ping',from:r});loadMessagesFromBackend();render();}
+
+async function loadMessagesFromBackend(){
+  try{
+    const res = await fetch(`${CONFIG.BACKEND_URL}/patients/${CONFIG.PATIENT_ID}/messages/`);
+    if(!res.ok) return;
+    const data = await res.json();
+    if(Array.isArray(data) && data.length){
+      // Merge without duplicates — use a simple timestamp+text key
+      const existing = new Set(S.messages.map(m=>m.time+'|'+m.text));
+      data.forEach(m=>{
+        const lbl={patient:'Patient',family:'Family',nurse:'Nurse'}[m.sender]||m.sender||'Unknown';
+        const time = m.created_at ? new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : tsShort();
+        const key = time+'|'+m.content;
+        if(!existing.has(key)){
+          S.messages.push({from:m.sender||'unknown',label:lbl,text:m.content,time});
+          existing.add(key);
+        }
+      });
+      S.messages.sort((a,b)=>a.time.localeCompare(b.time));
+      const ml=document.getElementById('msg-list');
+      if(ml){ml.innerHTML=msgListHTML();ml.scrollTop=ml.scrollHeight;}
+    }
+  } catch(e){ /* backend offline — silent fail */ }
+}
 
 function render(){
   const app=document.getElementById('app');if(!app)return;
