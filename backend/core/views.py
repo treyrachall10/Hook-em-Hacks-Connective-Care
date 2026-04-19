@@ -20,7 +20,7 @@ class MessagePostView(APIView):
     POST body JSON: patient_id, sender_id, content (persisted as Message.text).
     Persists a new message only; does not affect frontend rendering.
     """
-
+    print("MessagePostView")
     def post(self, request, *args, **kwargs):
         patient_id = request.data.get("patient_id")
         sender_id = request.data.get("sender_id")

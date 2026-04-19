@@ -241,6 +241,35 @@ const S={
   aiHandoffComplete: false
 };
 
+/* Backend chat persistence only; does not drive UI. Override with window.VIGIL_API_BASE if needed. */
+const VIGIL_API_BASE =
+  typeof window !== 'undefined' &&
+  window.VIGIL_API_BASE != null &&
+  String(window.VIGIL_API_BASE).trim() !== ''
+    ? String(window.VIGIL_API_BASE).replace(/\/$/, '')
+    : 'http://127.0.0.1:8000';
+
+function persistOutgoingChatToBackend(content) {
+  if (S.role !== 'patient' && S.role !== 'family') return;
+  const t = typeof content === 'string' ? content.trim() : '';
+  if (!t) return;
+
+  const patient_id = 2;
+  const sender_id = S.role === 'patient' ? 11 : 6;
+
+  const url = `${VIGIL_API_BASE}/messages/post/`;
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ patient_id, sender_id, content: t }),
+  })
+    .then((r) => {
+      if (!r.ok)
+        console.warn('[Vigil] message persist failed:', r.status, r.statusText);
+    })
+    .catch((err) => console.warn('[Vigil] message persist failed:', err));
+}
+
 function now(){return Date.now();}
 function tsShort(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
 function dist(a,b){return Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2);}
@@ -892,6 +921,7 @@ function sendMsg() {
     inp.value = '';
     S.messages.push({from: S.role, label: 'Patient', text: text, time: time});
     updateChatDOM();
+    persistOutgoingChatToBackend(text);
 
     if (/(family|nurse|connect|speak|help|doctor)/i.test(text)) {
       S.aiHandoffComplete = true; 
@@ -922,6 +952,7 @@ function sendMsg() {
   S.messages.push({from: S.role, label: lbl, text: text, time: time});
   CH.postMessage({type: 'chat', from: S.role, text: text, time: time});
   updateChatDOM();
+  persistOutgoingChatToBackend(text);
 }
 
 function setRole(r){
@@ -997,6 +1028,7 @@ function toggleMic() {
     speechRec.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       document.getElementById('msg-input').value = transcript;
+      /* STT: same persistence as send button — runs inside sendMsg after optimistic UI */
       setTimeout(sendMsg, 300);
     };
     
