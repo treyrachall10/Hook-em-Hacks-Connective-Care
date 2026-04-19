@@ -18,7 +18,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
-from core.views import MessagePatchView, PatientMessageListView
+from core.views import MessagePostView, PatientMessageListView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -28,8 +28,8 @@ urlpatterns = [
         name="patient-messages",
     ),
     path(
-        "messages/patch/",
-        MessagePatchView.as_view(),
-        name="message-patch",
+        "messages/post/",
+        MessagePostView.as_view(),
+        name="message-post",
     ),
 ]
