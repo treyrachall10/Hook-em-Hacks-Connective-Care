@@ -249,19 +249,98 @@ const VIGIL_API_BASE =
     ? String(window.VIGIL_API_BASE).replace(/\/$/, '')
     : 'http://127.0.0.1:8000';
 
+const ROLE_CONFIG = {
+  patient: { patient_id: 2, sender_id: 11 },
+  family: { patient_id: 2, sender_id: 6 },
+};
+
+function mapServerMessageRow(row) {
+  const sr = String(row.sender_role || '').toLowerCase();
+  const from =
+    sr === 'patient'
+      ? 'patient'
+      : sr === 'family'
+        ? 'family'
+        : sr === 'nurse'
+          ? 'nurse'
+          : 'family';
+  const label =
+    { patient: 'Patient', family: 'Family', nurse: 'Nurse' }[from] ||
+    row.sender_role ||
+    'Unknown';
+  let timeStr;
+  try {
+    timeStr = new Date(row.created_at).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch (e) {
+    timeStr = tsShort();
+  }
+  return {
+    id: row.id,
+    sender_id: row.sender_id,
+    from,
+    label,
+    text: row.message,
+    time: timeStr,
+  };
+}
+
+function mergeFetchedMessagesIntoChat(rows) {
+  if (!Array.isArray(rows) || !rows.length) return;
+  const existingIds = new Set(
+    S.messages.filter((m) => m.id != null).map((m) => Number(m.id)),
+  );
+  const toPrepend = [];
+  for (const row of rows) {
+    if (!row || row.id == null) continue;
+    const nid = Number(row.id);
+    if (existingIds.has(nid)) continue;
+    existingIds.add(nid);
+    toPrepend.push(mapServerMessageRow(row));
+  }
+  if (!toPrepend.length) return;
+  S.messages = toPrepend.concat(S.messages);
+}
+
+function fetchPatientMessagesFromServer() {
+  const role = S.role;
+  if (role !== 'patient' && role !== 'family') return;
+  const currentUser = ROLE_CONFIG[role];
+  if (!currentUser) return;
+
+  const url = `${VIGIL_API_BASE}/patients/${currentUser.patient_id}/messages/`;
+  fetch(url)
+    .then((r) => {
+      if (!r.ok) throw new Error(String(r.status));
+      return r.json();
+    })
+    .then((data) => {
+      if (!Array.isArray(data)) return;
+      mergeFetchedMessagesIntoChat(data);
+      updateChatDOM();
+    })
+    .catch((err) => console.warn('[Vigil] fetch messages failed:', err));
+}
+
 function persistOutgoingChatToBackend(content) {
   if (S.role !== 'patient' && S.role !== 'family') return;
   const t = typeof content === 'string' ? content.trim() : '';
   if (!t) return;
 
-  const patient_id = 2;
-  const sender_id = S.role === 'patient' ? 11 : 6;
+  const cfg = ROLE_CONFIG[S.role];
+  if (!cfg) return;
 
   const url = `${VIGIL_API_BASE}/messages/post/`;
   fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ patient_id, sender_id, content: t }),
+    body: JSON.stringify({
+      patient_id: cfg.patient_id,
+      sender_id: cfg.sender_id,
+      content: t,
+    }),
   })
     .then((r) => {
       if (!r.ok)
@@ -638,9 +717,17 @@ function connChip(on,label, id){return `<div ${id ? `id="${id}"` : ''} class="co
 
 function msgListHTML(){
   if(!S.messages.length)return '<div style="font-size:11px;color:var(--ink4);font-style:italic">No messages yet.</div>';
+  const currentUser = ROLE_CONFIG[S.role];
   return S.messages.map(m=>{
-    const isMe = (m.from === S.role);
-    const isAI = (m.from === 'system');
+    const isAI = m.from === 'system';
+    let isMe;
+    if (!isAI && currentUser != null && m.sender_id != null && m.sender_id !== '') {
+      isMe = Number(m.sender_id) === Number(currentUser.sender_id);
+    } else if (!isAI) {
+      isMe = m.from === S.role;
+    } else {
+      isMe = false;
+    }
     const wrapCls = isMe ? 'mb-me-wrap' : 'mb-other-wrap';
     
     let bubCls = isMe ? 'mb-me' : (m.from === 'nurse' ? 'mb-nurse' : 'mb-other');
@@ -970,6 +1057,10 @@ function setRole(r){
         // Notice we removed the speakWithElevenLabs() and the click listeners from here!
       }
     }, 1000);
+    /* Load server history after greeting window so empty-state + AI greeting stay unchanged */
+    setTimeout(() => fetchPatientMessagesFromServer(), 1500);
+  } else if (r === 'family') {
+    fetchPatientMessagesFromServer();
   }
 }
 
