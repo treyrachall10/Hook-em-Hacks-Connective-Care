@@ -15,19 +15,20 @@ class PatientMessageListView(generics.ListAPIView):
         return Message.objects.filter(patient_id=patient_id).order_by("created_at", "id")
 
 
-class MessagePatchView(APIView):
+class MessagePostView(APIView):
     """
-    PATCH body JSON: patient_id, sender_id, message (maps to Message.text).
+    POST body JSON: patient_id, sender_id, content (persisted as Message.text).
+    Persists a new message only; does not affect frontend rendering.
     """
-
-    def patch(self, request, *args, **kwargs):
+    print("MessagePostView")
+    def post(self, request, *args, **kwargs):
         patient_id = request.data.get("patient_id")
         sender_id = request.data.get("sender_id")
-        text = request.data.get("message")
+        text = request.data.get("content")
 
         if patient_id is None or sender_id is None or text is None:
             return Response(
-                {"detail": "patient_id, sender_id, and message are required."},
+                {"detail": "patient_id, sender_id, and content are required."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -41,5 +42,5 @@ class MessagePatchView(APIView):
         )
         return Response(
             PatientMessageSerializer(msg).data,
-            status=status.HTTP_200_OK,
+            status=status.HTTP_201_CREATED,
         )

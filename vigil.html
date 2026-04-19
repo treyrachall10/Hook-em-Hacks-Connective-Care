@@ -195,7 +195,8 @@ const AUDIO = {
   nurseAlert: new Audio('alert.mp3'),
   familyAlert: new Audio('alert.mp3'),
   sleepMusic: new Audio('calm.mp3'),
-  aiVoice: new Audio() // Persistent object to prevent browser autoplay blocks
+  aiVoice: new Audio(), // Vigil AI / Gemini TTS
+  patientChatTts: new Audio(), // Incoming chat (patient only); separate so AI playback is not overwritten
 };
 AUDIO.sleepMusic.loop = true;
 
@@ -238,8 +239,120 @@ const S={
   faceMesh:null,mpCamera:null,lastFrame:null,frameCount:0,
   videoCallState:null,
   videoCallUrl:null,
-  aiHandoffComplete: false
+  aiHandoffComplete: false,
+  /** Nurse-controlled: read aloud incoming family/nurse chat on patient tab (via BroadcastChannel). */
+  patientTtsEnabled: false,
+  _patientIncomingTtsLastKey: '',
 };
+
+/* Backend chat persistence only; does not drive UI. Override with window.VIGIL_API_BASE if needed. */
+const VIGIL_API_BASE =
+  typeof window !== 'undefined' &&
+  window.VIGIL_API_BASE != null &&
+  String(window.VIGIL_API_BASE).trim() !== ''
+    ? String(window.VIGIL_API_BASE).replace(/\/$/, '')
+    : 'http://127.0.0.1:8000';
+
+const ROLE_CONFIG = {
+  patient: { patient_id: 2, sender_id: 11 },
+  family: { patient_id: 2, sender_id: 6 },
+  nurse: {},
+};
+
+function mapServerMessageRow(row) {
+  const sr = String(row.sender_role || '').toLowerCase();
+  const from =
+    sr === 'patient'
+      ? 'patient'
+      : sr === 'family'
+        ? 'family'
+        : sr === 'nurse'
+          ? 'nurse'
+          : 'family';
+  const label =
+    { patient: 'Patient', family: 'Family', nurse: 'Nurse' }[from] ||
+    row.sender_role ||
+    'Unknown';
+  let timeStr;
+  try {
+    timeStr = new Date(row.created_at).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch (e) {
+    timeStr = tsShort();
+  }
+  return {
+    id: row.id,
+    sender_id: row.sender_id,
+    from,
+    label,
+    text: row.message,
+    time: timeStr,
+  };
+}
+
+function mergeFetchedMessagesIntoChat(rows) {
+  if (!Array.isArray(rows) || !rows.length) return;
+  const existingIds = new Set(
+    S.messages.filter((m) => m.id != null).map((m) => Number(m.id)),
+  );
+  const toPrepend = [];
+  for (const row of rows) {
+    if (!row || row.id == null) continue;
+    const nid = Number(row.id);
+    if (existingIds.has(nid)) continue;
+    existingIds.add(nid);
+    toPrepend.push(mapServerMessageRow(row));
+  }
+  if (!toPrepend.length) return;
+  S.messages = toPrepend.concat(S.messages);
+}
+
+function fetchPatientMessagesFromServer() {
+  const role = S.role;
+  if (role !== 'patient' && role !== 'family') return;
+  const currentUser = ROLE_CONFIG[role];
+  if (!currentUser) return;
+
+  const url = `${VIGIL_API_BASE}/patients/${currentUser.patient_id}/messages/`;
+  fetch(url)
+    .then((r) => {
+      if (!r.ok) throw new Error(String(r.status));
+      return r.json();
+    })
+    .then((data) => {
+      if (!Array.isArray(data)) return;
+      mergeFetchedMessagesIntoChat(data);
+      updateChatDOM();
+    })
+    .catch((err) => console.warn('[Vigil] fetch messages failed:', err));
+}
+
+function persistOutgoingChatToBackend(content) {
+  if (S.role !== 'patient' && S.role !== 'family') return;
+  const t = typeof content === 'string' ? content.trim() : '';
+  if (!t) return;
+
+  const cfg = ROLE_CONFIG[S.role];
+  if (!cfg) return;
+
+  const url = `${VIGIL_API_BASE}/messages/post/`;
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      patient_id: cfg.patient_id,
+      sender_id: cfg.sender_id,
+      content: t,
+    }),
+  })
+    .then((r) => {
+      if (!r.ok)
+        console.warn('[Vigil] message persist failed:', r.status, r.statusText);
+    })
+    .catch((err) => console.warn('[Vigil] message persist failed:', err));
+}
 
 function now(){return Date.now();}
 function tsShort(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
@@ -360,8 +473,80 @@ function updateConnections() {
   if (pc) pc.outerHTML = connChip(S.patientConnected, 'Patient', 'conn-patient');
 }
 
+const ELEVENLABS_API_KEY = 'sk_75f277f23079ba2e44ff03f0493fc1124491b7ddeda8a126';
+const ELEVENLABS_VOICE_ID = 'jqcCZkN6Knx8BJ5TBdYR';
+const GEMINI_API_KEY = 'AIzaSyAPeq073s6XyEQlhAV9MQw-3H91UvytJT4';
+  (typeof window !== 'undefined' && window.GEMINI_API_KEY) || 'APIKEYHERE';
+
+/**
+ * ElevenLabs TTS — swap `speak` implementation later to change provider.
+ * @param {string} text
+ * @param {HTMLAudioElement} audioEl
+ */
+const ElevenLabsTts = {
+  async speak(text, audioEl) {
+    const t = typeof text === 'string' ? text.trim() : '';
+    if (!t || !ELEVENLABS_API_KEY || ELEVENLABS_API_KEY === 'APIKEYHERE') return;
+    if (!audioEl) return;
+    try {
+      const response = await fetch(
+        `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(ELEVENLABS_VOICE_ID)}`,
+        {
+          method: 'POST',
+          headers: {
+            'xi-api-key': ELEVENLABS_API_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            text: t,
+            model_id: 'eleven_turbo_v2_5',
+            voice_settings: { stability: 0.5, similarity_boost: 0.5 },
+          }),
+        },
+      );
+      if (!response.ok) throw new Error('TTS HTTP ' + response.status);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      if (audioEl.src && String(audioEl.src).startsWith('blob:'))
+        try {
+          URL.revokeObjectURL(audioEl.src);
+        } catch (e) {}
+      audioEl.src = url;
+      audioEl.volume = 1.0;
+      await audioEl.play().catch((e) => console.warn('[Vigil] TTS play blocked:', e));
+    } catch (e) {
+      console.warn('[Vigil] ElevenLabs TTS error:', e);
+    }
+  },
+};
+
+/** Incoming family/nurse chat only; not history fetch, not own sends, not system. */
+function maybeSpeakPatientIncomingChatFromChannel(d) {
+  if (S.role !== 'patient') return;
+  if (!S.patientTtsEnabled) return;
+  if (!d || d.from === 'patient' || d.from === 'system') return;
+  if (d.from !== 'family' && d.from !== 'nurse') return;
+  const plain =
+    typeof d.text === 'string'
+      ? d.text
+      : d.text != null
+        ? String(d.text)
+        : '';
+  if (!plain.trim()) return;
+  const key = `${d.from}|${d.time}|${plain}`;
+  if (key === S._patientIncomingTtsLastKey) return;
+  S._patientIncomingTtsLastKey = key;
+  void ElevenLabsTts.speak(plain, AUDIO.patientChatTts);
+}
+
 CH.onmessage=e=>{
   const d=e.data;
+  if (d.type === 'patient_tts_setting') {
+    S.patientTtsEnabled = !!d.enabled;
+  }
+  if (d.type === 'patient_tts_sync_request' && S.role === 'nurse') {
+    CH.postMessage({ type: 'patient_tts_setting', enabled: !!S.patientTtsEnabled });
+  }
   if(d.type==='ping')handlePing(d.from);
   if(d.type==='pong')handlePong(d.from);
   if(d.type==='state_update'&&(S.role==='family'||S.role==='nurse')){
@@ -408,7 +593,8 @@ CH.onmessage=e=>{
   if(d.type==='chat'){
     const lbl={patient:'Patient',family:'Family',nurse:'Nurse',system:'Vigil AI'}[d.from]||d.from;
     S.messages.push({from:d.from,label:lbl,text:d.text,time:d.time});
-    updateChatDOM(); 
+    updateChatDOM();
+    maybeSpeakPatientIncomingChatFromChannel(d);
   }
   if(d.type==='video_call_request'&&S.role==='nurse'){
     S.nurseNotifications.unshift({id:now(),type:'videocall',title:'Family video call request',sub:'Family would like to call '+S.patientName+' · '+tsShort(),priority:'high',ts:tsShort()});
@@ -609,9 +795,17 @@ function connChip(on,label, id){return `<div ${id ? `id="${id}"` : ''} class="co
 
 function msgListHTML(){
   if(!S.messages.length)return '<div style="font-size:11px;color:var(--ink4);font-style:italic">No messages yet.</div>';
+  const currentUser = ROLE_CONFIG[S.role];
   return S.messages.map(m=>{
-    const isMe = (m.from === S.role);
-    const isAI = (m.from === 'system');
+    const isAI = m.from === 'system';
+    let isMe;
+    if (!isAI && currentUser != null && m.sender_id != null && m.sender_id !== '') {
+      isMe = Number(m.sender_id) === Number(currentUser.sender_id);
+    } else if (!isAI) {
+      isMe = m.from === S.role;
+    } else {
+      isMe = false;
+    }
     const wrapCls = isMe ? 'mb-me-wrap' : 'mb-other-wrap';
     
     let bubCls = isMe ? 'mb-me' : (m.from === 'nurse' ? 'mb-nurse' : 'mb-other');
@@ -838,7 +1032,12 @@ function renderNurse(){
   return `<div style="padding:20px 24px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
       <div><div style="font-family:'DM Serif Display',serif;font-size:26px;color:var(--ink)">Nurse station</div><div style="font-size:12px;color:var(--ink3);margin-top:2px">${unacked.length?`<span style="color:#7a4a00;font-weight:500">${unacked.length} unacknowledged</span>`:'All clear'}</div></div>
-      <div style="display:flex;gap:6px;align-items:center;">${connChip(S.patientConnected,'Patient','conn-patient')}<button class="btn btn-ghost" style="padding:6px 12px;font-size:11px" onclick="S.role=null;render()">Switch</button></div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">${connChip(S.patientConnected,'Patient','conn-patient')}
+        <label class="btn btn-ghost" style="padding:6px 10px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;margin:0;">
+          <input type="checkbox" ${S.patientTtsEnabled ? 'checked' : ''} onchange="setNursePatientIncomingTts(this.checked)" style="accent-color:var(--purple);"/>
+          Patient incoming TTS
+        </label>
+        <button class="btn btn-ghost" style="padding:6px 12px;font-size:11px" onclick="S.role=null;render()">Switch</button></div>
     </div>
     ${isAwake?`<div class="alert-banner ab-green"><div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:50%;background:var(--green-dim);border:1px solid var(--green-border);display:flex;align-items:center;justify-content:center;animation:breathe 1.5s infinite;"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="var(--green)" stroke-width="1.1"/><path d="M4 6.5l2 2 3.5-3.5" stroke="var(--green)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div style="font-family:'DM Serif Display',serif;font-size:16px;color:var(--ink)">${S.patientName} — awake</div><div style="font-size:11px;color:#1e7a4e;">Patient may need attention</div></div></div><button class="btn btn-green" onclick="S.nurseBannerDismissed=true;S.nurseNotifications.filter(n=>n.type==='eye').forEach(n=>n.acked=true);render()">Acknowledge</button></div>`:''}
     ${hiM?`<div class="alert-banner ab-amber"><div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:50%;background:var(--amber-dim);border:1px solid var(--amber-border);display:flex;align-items:center;justify-content:center;animation:breathe 1.4s infinite;"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1.5L12 11H1L6.5 1.5z" stroke="var(--amber)" stroke-width="1.1" stroke-linejoin="round"/><path d="M6.5 5.5v2.5M6.5 9.5v.5" stroke="var(--amber)" stroke-width="1.2" stroke-linecap="round"/></svg></div><div><div style="font-family:'DM Serif Display',serif;font-size:16px;color:var(--ink)">${S.patientName} — high movement (${S.motionLevel}%)</div><div style="font-size:11px;color:#7a4a00;">May be in distress</div></div></div><button class="btn btn-amber" onclick="S.nurseMotionCooldown=Date.now()+30000;render()">Acknowledge</button></div>`:''}
@@ -892,6 +1091,7 @@ function sendMsg() {
     inp.value = '';
     S.messages.push({from: S.role, label: 'Patient', text: text, time: time});
     updateChatDOM();
+    persistOutgoingChatToBackend(text);
 
     if (/(family|nurse|connect|speak|help|doctor)/i.test(text)) {
       S.aiHandoffComplete = true; 
@@ -922,14 +1122,22 @@ function sendMsg() {
   S.messages.push({from: S.role, label: lbl, text: text, time: time});
   CH.postMessage({type: 'chat', from: S.role, text: text, time: time});
   updateChatDOM();
+  persistOutgoingChatToBackend(text);
+}
+
+function setNursePatientIncomingTts(enabled) {
+  if (S.role !== 'nurse') return;
+  S.patientTtsEnabled = !!enabled;
+  CH.postMessage({ type: 'patient_tts_setting', enabled: S.patientTtsEnabled });
+  render();
 }
 
 function setRole(r){
   S.role = r;
   CH.postMessage({type:'ping',from:r});
   render();
-  
   if (r === 'patient') {
+    CH.postMessage({ type: 'patient_tts_sync_request' });
     // Just show the text greeting after 1 second, but DO NOT speak it out loud
     setTimeout(() => {
       if (!S.aiHandoffComplete && S.messages.length === 0) {
@@ -939,6 +1147,12 @@ function setRole(r){
         // Notice we removed the speakWithElevenLabs() and the click listeners from here!
       }
     }, 1000);
+    /* Load server history after greeting window so empty-state + AI greeting stay unchanged */
+    setTimeout(() => fetchPatientMessagesFromServer(), 1500);
+  } else if (r === 'family') {
+    fetchPatientMessagesFromServer();
+  } else if (r === 'nurse') {
+    CH.postMessage({ type: 'patient_tts_setting', enabled: !!S.patientTtsEnabled });
   }
 }
 
@@ -997,6 +1211,7 @@ function toggleMic() {
     speechRec.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       document.getElementById('msg-input').value = transcript;
+      /* STT: same persistence as send button — runs inside sendMsg after optimistic UI */
       setTimeout(sendMsg, 300);
     };
     
@@ -1008,34 +1223,7 @@ function toggleMic() {
 }
 
 async function speakWithElevenLabs(text) {
-  if (!ELEVENLABS_API_KEY || ELEVENLABS_API_KEY === 'APIKEYHERE') return; 
-
-  try {
-    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
-      method: 'POST',
-      headers: {
-        'xi-api-key': ELEVENLABS_API_KEY,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        text: text,
-        model_id: "eleven_turbo_v2_5", 
-        voice_settings: { stability: 0.5, similarity_boost: 0.5 }
-      })
-    });
-    
-    if (!response.ok) throw new Error("Failed to generate speech");
-
-    const blob = await response.blob();
-    const audioUrl = URL.createObjectURL(blob);
-    
-    AUDIO.aiVoice.src = audioUrl;
-    AUDIO.aiVoice.volume = 1.0;
-    AUDIO.aiVoice.play().catch(e => console.error("Browser blocked AI speech play:", e));
-
-  } catch (error) {
-    console.error("ElevenLabs Error:", error);
-  }
+  await ElevenLabsTts.speak(text, AUDIO.aiVoice);
 }
 
 async function callGeminiAPI(userText) {
