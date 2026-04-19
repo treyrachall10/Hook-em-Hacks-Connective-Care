@@ -64,7 +64,7 @@ body{font-family:'Outfit',sans-serif;background:var(--canvas);color:var(--ink);}
 @keyframes breathe{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.3;transform:scale(0.7)}}
 
 /* Buttons */
-.btn{padding:8px 16px;border-radius:10px;font-size:12px;font-family:'Outfit',sans-serif;cursor:pointer;border:none;transition:opacity 0.15s,transform 0.1s;}
+.btn{padding:8px 16px;border-radius:10px;font-size:12px;font-family:'Outfit',sans-serif;cursor:pointer;border:none;transition:opacity 0.15s,transform 0.1s;flex-shrink:0;}
 .btn:active{transform:scale(0.97);}
 .btn-primary{background:linear-gradient(135deg,#9b6bf0,#7b4ed8);color:white;}
 .btn-primary:hover{opacity:0.88;}
@@ -139,9 +139,10 @@ body{font-family:'Outfit',sans-serif;background:var(--canvas);color:var(--ink);}
 .mb-me{background:linear-gradient(135deg,#9b6bf0,#7b4ed8);color:white;padding:7px 11px;border-radius:12px;border-bottom-right-radius:3px;font-size:12px;line-height:1.5;max-width:88%;}
 .mb-other{background:rgba(255,255,255,0.85);color:var(--ink);padding:7px 11px;border-radius:12px;border-bottom-left-radius:3px;font-size:12px;line-height:1.5;max-width:88%;border:1px solid rgba(155,107,240,0.14);}
 .mb-nurse{background:rgba(255,243,210,0.9);color:#5a3200;padding:7px 11px;border-radius:12px;border-bottom-left-radius:3px;font-size:12px;line-height:1.5;max-width:88%;border:1px solid rgba(240,165,0,0.22);}
+.mb-ai {background:#e0efff;color:#1a365d;padding:7px 11px;border-radius:12px;border-bottom-left-radius:3px;font-size:12px;line-height:1.5;max-width:88%;border:1px solid #b8d4f2;}
 .msg-meta{font-size:10px;color:var(--ink4);margin-top:2px;}
-.msg-row{display:flex;gap:6px;margin-top:8px;}
-.msg-inp{flex:1;padding:8px 11px;border:1px solid rgba(155,107,240,0.22);border-radius:9px;font-size:12px;background:rgba(255,255,255,0.75);color:var(--ink);font-family:'Outfit',sans-serif;outline:none;}
+.msg-row{display:flex;gap:6px;margin-top:8px;align-items:center;width:100%;}
+.msg-inp{flex:1;min-width:10px;padding:8px 11px;border:1px solid rgba(155,107,240,0.22);border-radius:9px;font-size:12px;background:rgba(255,255,255,0.75);color:var(--ink);font-family:'Outfit',sans-serif;outline:none;}
 .msg-inp::placeholder{color:var(--ink4);}
 
 /* Conn chips */
@@ -189,6 +190,36 @@ const WAKE_CONFIRM_MS=600;
 const MOTION_ALERT=35;
 const MOTION_HIGH=60;
 
+/* ── AUDIO & SOUND CONFIG ── */
+const AUDIO = {
+  nurseAlert: new Audio('alert.mp3'),
+  familyAlert: new Audio('alert.mp3'),
+  sleepMusic: new Audio('calm.mp3'),
+  aiVoice: new Audio() // Persistent object to prevent browser autoplay blocks
+};
+AUDIO.sleepMusic.loop = true;
+
+// AUDIO UNLOCKER: Browsers block audio until a user interaction occurs.
+let audioUnlocked = false;
+function unlockAudioEngine() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  
+  // Quickly play and pause all audio objects silently to unlock them
+  Object.values(AUDIO).forEach(a => {
+    a.volume = 0; 
+    a.play().then(() => {
+      a.pause();
+      a.currentTime = 0;
+      a.volume = (a === AUDIO.sleepMusic) ? 0.3 : 1; // Sleep music stays soft
+    }).catch(e => console.log("Audio unlock pending...", e));
+  });
+
+  ['click', 'touchstart', 'keydown'].forEach(evt => document.removeEventListener(evt, unlockAudioEngine));
+}
+// Attach unlocker to the document
+['click', 'touchstart', 'keydown'].forEach(evt => document.addEventListener(evt, unlockAudioEngine));
+
 /* ── State ── */
 const S={
   role:null,patientName:'George P.',patientRoom:'Room 1',patientWard:'ICU',
@@ -207,6 +238,7 @@ const S={
   faceMesh:null,mpCamera:null,lastFrame:null,frameCount:0,
   videoCallState:null,
   videoCallUrl:null,
+  aiHandoffComplete: false
 };
 
 function now(){return Date.now();}
@@ -221,6 +253,8 @@ function calcMotion(cur,prev){
   return Math.min(100,Math.round(t*6000));
 }
 
+let sleepMusicTimer = null;
+
 function transitionSleepState(newState){
   if(S.sleepState===newState)return;
   const old=S.sleepState;
@@ -228,8 +262,25 @@ function transitionSleepState(newState){
   if(S.currentSeg){S.currentSeg.end=now();S.currentSeg.dur=duration;S.segments.push({...S.currentSeg});}
   if(old==='asleep')S.totalSleepMs+=duration;
   else if(old==='awake')S.totalAwakeMs+=duration;
-  S.sleepState=newState;S.sleepStateStart=now();
+  
+  S.sleepState=newState;
+  S.sleepStateStart=now();
   S.currentSeg={state:newState,start:now(),end:null,dur:0};
+  
+  if (S.role === 'patient') {
+    if (newState === 'asleep') {
+      sleepMusicTimer = setTimeout(() => {
+        if (S.sleepState === 'asleep') {
+          AUDIO.sleepMusic.play().catch(e => console.log("Browser blocked lullaby:", e));
+        }
+      }, 5000);
+    } else {
+      clearTimeout(sleepMusicTimer);
+      AUDIO.sleepMusic.pause();
+      AUDIO.sleepMusic.currentTime = 0; 
+    }
+  }
+
   const labels={awake:'Patient awake',asleep:'Sleep detected',blinking:'Blink detected',unknown:'Signal lost'};
   addEvent(newState,labels[newState]||newState);broadcastState();
 }
@@ -315,28 +366,36 @@ CH.onmessage=e=>{
   if(d.type==='pong')handlePong(d.from);
   if(d.type==='state_update'&&(S.role==='family'||S.role==='nurse')){
     Object.assign(S,{eyeState:d.eyeState,confidence:d.confidence,lastEAR:d.lastEAR,alertsToday:d.alertsToday,motionAlertsToday:d.motionAlertsToday,events:d.events,motionLevel:d.motionLevel,remoteSegments:d.segments,remoteSleepMs:d.totalSleepMs,remoteAwakeMs:d.totalAwakeMs,remoteSessionMs:d.sessionMs,remoteBlinkCount:d.blinkCount,remoteSleepPct:d.sleepPct});
+    
     if(S.role==='family'){
-      if(d.eyeState==='awake'&&!S.familyAlerted){S.familyAlerted=true;S.notifications.unshift({id:now(),title:S.patientName+' is awake',sub:'Eyes open · '+tsShort(),color:'var(--green)',ts:tsShort(),type:'awake'});playTone([880,880,1100]);}
-      if(d.eyeState==='asleep'&&S.familyAlerted){S.familyAlerted=false;S.videoCallState=null;S.notifications.unshift({id:now(),title:S.patientName+' fell asleep',sub:'Sleep detected · '+tsShort(),color:'var(--blue)',ts:tsShort(),type:'sleep'});}
+      if(d.eyeState==='awake'&&!S.familyAlerted){
+        S.familyAlerted=true;
+        S.notifications.unshift({id:now(),title:S.patientName+' is awake',sub:'Eyes open · '+tsShort(),color:'var(--green)',ts:tsShort(),type:'awake'});
+        AUDIO.familyAlert.play().catch(e=>console.log(e));
+      }
+      if(d.eyeState==='asleep'&&S.familyAlerted){
+        S.familyAlerted=false;S.videoCallState=null;S.notifications.unshift({id:now(),title:S.patientName+' fell asleep',sub:'Sleep detected · '+tsShort(),color:'var(--blue)',ts:tsShort(),type:'sleep'});
+      }
     }
+    
     if(S.role==='nurse'){
       if(d.eyeState==='awake'&&S._prevEyeState!=='awake'&&!S.nurseAlerted){
         S.nurseAlerted=true;
         S.nurseNotifications.unshift({id:now(),type:'eye',title:'Awake — '+S.patientName,sub:S.patientRoom+' · '+tsShort(),priority:'medium',ts:tsShort()});
-        playTone([660,880]);
+        AUDIO.nurseAlert.play().catch(e=>console.log(e));
       }
       if(d.eyeState==='asleep'&&S._prevEyeState!=='asleep'){
         S.nurseAlerted=false;
         S.nurseBannerDismissed=false;
         S.nurseNotifications.unshift({id:now(),type:'sleep',title:'Sleep detected — '+S.patientName,sub:S.patientRoom+' · '+tsShort(),priority:'low',ts:tsShort()});
-        playTone([440,330]);
       }
       const t=now();
       if(d.motionLevel>MOTION_ALERT&&(t-S.nurseMotionCooldown)>15000){
         S.nurseMotionCooldown=t;
         const hi=d.motionLevel>MOTION_HIGH;
         S.nurseNotifications.unshift({id:t,type:'motion',title:(hi?'High':'Elevated')+' movement',sub:S.patientName+' · '+d.motionLevel+'% · '+tsShort(),priority:hi?'high':'medium',ts:tsShort()});
-        playTone(hi?[440,550,660]:[550,660]);S.motionAlertsToday++;
+        AUDIO.nurseAlert.play().catch(e=>console.log(e)); 
+        S.motionAlertsToday++;
       }
       S._prevEyeState=d.eyeState;
     }
@@ -347,14 +406,14 @@ CH.onmessage=e=>{
     setTimeout(()=>drawFeedFrame(S.role==='family'?'familyFeedCanvas':'nurseFeedCanvas'),20);
   }
   if(d.type==='chat'){
-    const lbl={patient:'Patient',family:'Family',nurse:'Nurse'}[d.from]||d.from;
-    /* CHANGE: We now store the exact role that sent it (d.from), instead of checking isMine */
+    const lbl={patient:'Patient',family:'Family',nurse:'Nurse',system:'Vigil AI'}[d.from]||d.from;
     S.messages.push({from:d.from,label:lbl,text:d.text,time:d.time});
     updateChatDOM(); 
   }
   if(d.type==='video_call_request'&&S.role==='nurse'){
     S.nurseNotifications.unshift({id:now(),type:'videocall',title:'Family video call request',sub:'Family would like to call '+S.patientName+' · '+tsShort(),priority:'high',ts:tsShort()});
-    playTone([880,1100,880]);render();
+    AUDIO.nurseAlert.play().catch(e=>console.log(e)); 
+    render();
   }
   if(d.type==='video_call_response'){
     if(S.role==='family' || S.role==='patient') {
@@ -366,6 +425,7 @@ CH.onmessage=e=>{
     }
   }
 };
+
 function handlePing(from){
   if(from==='patient'&&(S.role==='family'||S.role==='nurse')){S.patientConnected=true;CH.postMessage({type:'pong',from:S.role});updateConnections();}
   if(from==='family'&&(S.role==='patient'||S.role==='nurse')){S.familyConnected=true;CH.postMessage({type:'pong',from:S.role});updateConnections();}
@@ -376,10 +436,6 @@ function handlePong(from){
   if(from==='family')S.familyConnected=true;
   if(from==='nurse')S.nurseConnected=true;
   updateConnections();
-}
-
-function playTone(freqs){
-  try{const ctx=new AudioContext();freqs.forEach((f,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=f;const t=ctx.currentTime+i*0.18;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.25,t+0.04);g.gain.linearRampToValueAtTime(0,t+0.2);o.start(t);o.stop(t+0.2);});}catch(e){}
 }
 
 function loadMediaPipe(){
@@ -476,17 +532,11 @@ function stopCamera(){
   if(S.mpCamera){try{S.mpCamera.stop();}catch(e){}S.mpCamera=null;}
   if(S.faceMesh){try{S.faceMesh.close();}catch(e){}S.faceMesh=null;}
   const vid=document.getElementById('pVid');if(vid?.srcObject){vid.srcObject.getTracks().forEach(t=>t.stop());vid.srcObject=null;}
+  
+  clearTimeout(sleepMusicTimer);
+  AUDIO.sleepMusic.pause();
+  
   addEvent('info','Monitoring stopped');broadcastState();render();
-}
-
-function sendMsg(){
-  const inp=document.getElementById('msg-input');if(!inp||!inp.value.trim())return;
-  const text=inp.value.trim(),time=tsShort();inp.value='';
-  const lbl={patient:'Patient',family:'Family',nurse:'Nurse'}[S.role];
-  /* CHANGE: We now store the exact role that sent it (S.role), instead of hardcoding 'me' */
-  S.messages.push({from:S.role,label:lbl,text,time});
-  CH.postMessage({type:'chat',from:S.role,text,time});
-  updateChatDOM();
 }
 
 function updatePatientLive(){
@@ -560,15 +610,30 @@ function connChip(on,label, id){return `<div ${id ? `id="${id}"` : ''} class="co
 function msgListHTML(){
   if(!S.messages.length)return '<div style="font-size:11px;color:var(--ink4);font-style:italic">No messages yet.</div>';
   return S.messages.map(m=>{
-    /* CHANGE: Instead of looking for 'me', we dynamically check if the sender matches the CURRENT view's role */
     const isMe = (m.from === S.role);
+    const isAI = (m.from === 'system');
     const wrapCls = isMe ? 'mb-me-wrap' : 'mb-other-wrap';
-    const bubCls = isMe ? 'mb-me' : (m.from === 'nurse' ? 'mb-nurse' : 'mb-other');
-    return `<div class="${wrapCls}"><div class="${bubCls}">${!isMe ? `<span style="font-size:10px;opacity:0.65;display:block;margin-bottom:2px">${m.label}</span>`:''}${m.text}</div><div class="msg-meta">${m.time}</div></div>`;
+    
+    let bubCls = isMe ? 'mb-me' : (m.from === 'nurse' ? 'mb-nurse' : 'mb-other');
+    if (isAI) bubCls = 'mb-ai'; 
+    
+    return `<div class="${wrapCls}"><div class="${bubCls}">${(!isMe && !isAI) ? `<span style="font-size:10px;opacity:0.65;display:block;margin-bottom:2px">${m.label}</span>`:''}${isAI ? `<span style="font-size:10px;color:#4a729e;display:block;margin-bottom:2px;font-weight:600">✨ Vigil AI</span>`:''}${m.text}</div><div class="msg-meta">${m.time}</div></div>`;
   }).join('');
 }
 
-function msgBox(placeholder){return `<div class="gc" style="padding:13px 15px;"><div class="eyebrow">Messages</div><div class="msg-list" id="msg-list">${msgListHTML()}</div><div class="msg-row"><input class="msg-inp" id="msg-input" placeholder="${placeholder}" onkeydown="if(event.key==='Enter')sendMsg()"/><button class="btn btn-primary" style="padding:8px 12px" onclick="sendMsg()"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M10 1L4.5 6M10 1L7 10L4.5 6M10 1L1 4L4.5 6" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div>`;}
+function msgBox(placeholder){
+  return `<div class="gc" style="padding:13px 15px;">
+    <div class="eyebrow">Messages</div>
+    <div class="msg-list" id="msg-list">${msgListHTML()}</div>
+    <div class="msg-row">
+      <input class="msg-inp" id="msg-input" placeholder="${placeholder}" onkeydown="if(event.key==='Enter')sendMsg()"/>
+      <button class="btn btn-ghost" style="padding:8px 10px; margin-right:4px;" onclick="toggleMic()" title="Hold/Click to speak">🎤</button>
+      <button class="btn btn-primary" style="padding:8px 12px" onclick="sendMsg()">
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M10 1L4.5 6M10 1L7 10L4.5 6M10 1L1 4L4.5 6" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </div>`;
+}
 
 function remoteTimelineHTML(){
   const segs=S.remoteSegments||[];const totMs=S.remoteSessionMs||0;
@@ -706,7 +771,7 @@ function renderPatient(){
           <div class="ev-list" id="ps-evlist">${evHTML(S.events.slice(0,8))}</div>
         </div>
 
-        ${msgBox('Message family or nurse…')}
+        ${msgBox(S.aiHandoffComplete ? 'Message family or nurse...' : 'Chat with Vigil AI...')}
       </div>
     </div>
   </div>`;
@@ -817,7 +882,65 @@ function renderNurse(){
   </div>`;
 }
 
-function setRole(r){S.role=r;CH.postMessage({type:'ping',from:r});render();}
+function sendMsg() {
+  const inp = document.getElementById('msg-input');
+  if (!inp || !inp.value.trim()) return;
+  const text = inp.value.trim();
+  const time = tsShort();
+
+  if (S.role === 'patient' && !S.aiHandoffComplete) {
+    inp.value = '';
+    S.messages.push({from: S.role, label: 'Patient', text: text, time: time});
+    updateChatDOM();
+
+    if (/(family|nurse|connect|speak|help|doctor)/i.test(text)) {
+      S.aiHandoffComplete = true; 
+      
+      const confirmText = "I am notifying your family and nurse right now. Live chat is now open.";
+      S.messages.push({from: 'system', label: 'Vigil AI', text: confirmText, time: tsShort()});
+      updateChatDOM();
+      speakWithElevenLabs(confirmText); 
+
+      CH.postMessage({
+        type: 'chat', 
+        from: 'system', 
+        text: `${S.patientName} has requested to speak with you. Live chat is now open.`, 
+        time: time
+      });
+      CH.postMessage({type: 'chat', from: S.role, text: text, time: time});
+      
+      document.getElementById('msg-input').placeholder = "Message family or nurse...";
+      render(); 
+    } else {
+      callGeminiAPI(text);
+    }
+    return; 
+  }
+
+  inp.value = '';
+  const lbl = {patient:'Patient', family:'Family', nurse:'Nurse'}[S.role];
+  S.messages.push({from: S.role, label: lbl, text: text, time: time});
+  CH.postMessage({type: 'chat', from: S.role, text: text, time: time});
+  updateChatDOM();
+}
+
+function setRole(r){
+  S.role = r;
+  CH.postMessage({type:'ping',from:r});
+  render();
+  
+  if (r === 'patient') {
+    // Just show the text greeting after 1 second, but DO NOT speak it out loud
+    setTimeout(() => {
+      if (!S.aiHandoffComplete && S.messages.length === 0) {
+        const greeting = "Hello! I am Vigil AI. I am here to assist you. If you need your humans, just tell me 'I want to speak to my family' or 'connect me to my nurse'.";
+        S.messages.push({from: 'system', label: 'Vigil AI', text: greeting, time: tsShort()});
+        updateChatDOM();
+        // Notice we removed the speakWithElevenLabs() and the click listeners from here!
+      }
+    }, 1000);
+  }
+}
 
 function render(){
   const app=document.getElementById('app');if(!app)return;
@@ -845,12 +968,112 @@ render();
 setInterval(()=>{if(S.role)CH.postMessage({type:'ping',from:S.role});},4000);
 setInterval(()=>{if(S.role==='patient'&&S.isMonitoring)updatePatientLive();},1000);
 
-/* ── URL Parameter Auto-Role Selection ── */
 const urlParams = new URLSearchParams(window.location.search);
 const roleParam = urlParams.get('role');
 if (roleParam && ['patient', 'family', 'nurse'].includes(roleParam) && !S.role) {
   setRole(roleParam);
 }
+
+/* =========================================
+   STT, GEMINI API & ELEVENLABS TTS
+========================================= */
+let speechRec;
+function toggleMic() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Sorry, your browser doesn't support the Web Speech API. Try Chrome!");
+    return;
+  }
+  
+  if (!speechRec) {
+    speechRec = new SpeechRecognition();
+    speechRec.continuous = false;
+    speechRec.interimResults = false;
+    
+    speechRec.onstart = () => {
+      document.getElementById('msg-input').placeholder = "Listening...";
+    };
+    
+    speechRec.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      document.getElementById('msg-input').value = transcript;
+      setTimeout(sendMsg, 300);
+    };
+    
+    speechRec.onend = () => {
+      document.getElementById('msg-input').placeholder = (S.role === 'patient' && !S.aiHandoffComplete) ? "Chat with Vigil AI..." : "Message family or nurse...";
+    };
+  }
+  speechRec.start();
+}
+
+async function speakWithElevenLabs(text) {
+  if (!ELEVENLABS_API_KEY || ELEVENLABS_API_KEY === 'APIKEYHERE') return; 
+
+  try {
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
+      method: 'POST',
+      headers: {
+        'xi-api-key': ELEVENLABS_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        text: text,
+        model_id: "eleven_turbo_v2_5", 
+        voice_settings: { stability: 0.5, similarity_boost: 0.5 }
+      })
+    });
+    
+    if (!response.ok) throw new Error("Failed to generate speech");
+
+    const blob = await response.blob();
+    const audioUrl = URL.createObjectURL(blob);
+    
+    AUDIO.aiVoice.src = audioUrl;
+    AUDIO.aiVoice.volume = 1.0;
+    AUDIO.aiVoice.play().catch(e => console.error("Browser blocked AI speech play:", e));
+
+  } catch (error) {
+    console.error("ElevenLabs Error:", error);
+  }
+}
+
+async function callGeminiAPI(userText) {
+
+  try {
+    document.getElementById('msg-input').placeholder = "Vigil AI is typing...";
+    
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: `You are a comforting hospital AI assistant named Vigil. You are talking to a patient. Keep your response to 1 or 2 short sentences. Do not use asterisks or markdown, only plain spoken text. The patient says: "${userText}"` }]
+        }]
+      })
+    });
+    
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message);
+    
+    const reply = data.candidates[0].content.parts[0].text.replace(/\*/g, ''); 
+    
+    S.messages.push({from: 'system', label: 'Vigil AI', text: reply, time: tsShort()});
+    updateChatDOM();
+    
+    speakWithElevenLabs(reply);
+    
+  } catch (error) {
+    console.error("AI Error:", error);
+    const errorMsg = "I seem to have lost connection to my brain, but I'm still here!";
+    S.messages.push({from: 'system', label: 'Vigil AI', text: errorMsg, time: tsShort()});
+    updateChatDOM();
+    speakWithElevenLabs(errorMsg);
+  } finally {
+    document.getElementById('msg-input').placeholder = "Chat with Vigil AI...";
+  }
+}
+
 </script>
 </body>
 </html>
