@@ -18,21 +18,34 @@
   --r:14px;--r-sm:8px;--r-lg:20px;
 }
 body{font-family:'Outfit',sans-serif;background:var(--canvas);color:var(--ink);}
-.app{min-height:700px;background:linear-gradient(160deg,#ede8f8 0%,#f4f0fb 30%,#eef4fb 65%,#e8f5ee 100%);}
+.app{min-height:100vh;background:linear-gradient(160deg,#ede8f8 0%,#f4f0fb 30%,#eef4fb 65%,#e8f5ee 100%);display:flex;flex-direction:column;}
+
+/* Responsive Layout */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 /* Role select */
-.rs-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:700px;gap:0;}
+.rs-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:0;padding:20px;}
 .rs-brand{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
 .rs-brand-mark{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#9b6bf0,#6098f0);display:flex;align-items:center;justify-content:center;}
 .rs-brand-name{font-family:'DM Serif Display',serif;font-size:36px;color:var(--ink);letter-spacing:-0.5px;}
-.rs-sub{font-size:13px;color:var(--ink3);margin-bottom:40px;letter-spacing:0.2px;}
+.rs-sub{font-size:13px;color:var(--ink3);margin-bottom:40px;letter-spacing:0.2px;text-align:center;}
 .rs-grid{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;}
 .rs-card{width:196px;padding:28px 20px 22px;background:rgba(255,255,255,0.65);border:1px solid rgba(255,255,255,0.9);border-radius:22px;backdrop-filter:blur(12px);cursor:pointer;transition:transform 0.18s,box-shadow 0.18s;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;}
 .rs-card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(100,80,180,0.12);}
 .rs-icon{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
 .rs-title{font-family:'DM Serif Display',serif;font-size:19px;color:var(--ink);}
 .rs-desc{font-size:11.5px;color:var(--ink3);line-height:1.6;}
-.rs-hint{margin-top:30px;font-size:11px;color:var(--ink4);letter-spacing:0.5px;}
+.rs-hint{margin-top:30px;font-size:11px;color:var(--ink4);letter-spacing:0.5px;text-align:center;}
 
 /* Nav */
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:11px 22px;border-bottom:1px solid rgba(155,107,240,0.1);background:rgba(255,255,255,0.5);backdrop-filter:blur(14px);}
@@ -193,7 +206,7 @@ const S={
   familyAlerted:false,nurseAlerted:false,nurseMotionCooldown:0,
   faceMesh:null,mpCamera:null,lastFrame:null,frameCount:0,
   videoCallState:null,
-  videoCallUrl:null, // <-- ADD THIS
+  videoCallUrl:null,
 };
 
 function now(){return Date.now();}
@@ -279,6 +292,23 @@ function addEvent(type,text){
   broadcastState();
 }
 
+function updateChatDOM() {
+  const ml = document.getElementById('msg-list');
+  if (ml) {
+    ml.innerHTML = msgListHTML();
+    ml.scrollTop = ml.scrollHeight;
+  }
+}
+
+function updateConnections() {
+  const fc = document.getElementById('conn-family');
+  const nc = document.getElementById('conn-nurse');
+  const pc = document.getElementById('conn-patient');
+  if (fc) fc.outerHTML = connChip(S.familyConnected, 'Family', 'conn-family');
+  if (nc) nc.outerHTML = connChip(S.nurseConnected, 'Nurse', 'conn-nurse');
+  if (pc) pc.outerHTML = connChip(S.patientConnected, 'Patient', 'conn-patient');
+}
+
 CH.onmessage=e=>{
   const d=e.data;
   if(d.type==='ping')handlePing(d.from);
@@ -290,13 +320,11 @@ CH.onmessage=e=>{
       if(d.eyeState==='asleep'&&S.familyAlerted){S.familyAlerted=false;S.videoCallState=null;S.notifications.unshift({id:now(),title:S.patientName+' fell asleep',sub:'Sleep detected · '+tsShort(),color:'var(--blue)',ts:tsShort(),type:'sleep'});}
     }
     if(S.role==='nurse'){
-      /* Only fire awake alert on a new awake edge (not already alerted this wake session) */
       if(d.eyeState==='awake'&&S._prevEyeState!=='awake'&&!S.nurseAlerted){
         S.nurseAlerted=true;
         S.nurseNotifications.unshift({id:now(),type:'eye',title:'Awake — '+S.patientName,sub:S.patientRoom+' · '+tsShort(),priority:'medium',ts:tsShort()});
         playTone([660,880]);
       }
-      /* Reset nurseAlerted only on a sleep edge so a new wake after sleep fires again */
       if(d.eyeState==='asleep'&&S._prevEyeState!=='asleep'){
         S.nurseAlerted=false;
         S.nurseBannerDismissed=false;
@@ -319,10 +347,10 @@ CH.onmessage=e=>{
     setTimeout(()=>drawFeedFrame(S.role==='family'?'familyFeedCanvas':'nurseFeedCanvas'),20);
   }
   if(d.type==='chat'){
-    const isMine=d.from===S.role;
     const lbl={patient:'Patient',family:'Family',nurse:'Nurse'}[d.from]||d.from;
-    S.messages.push({from:isMine?'me':d.from,label:lbl,text:d.text,time:d.time});
-    render();setTimeout(()=>{const ml=document.getElementById('msg-list');if(ml)ml.scrollTop=ml.scrollHeight;},50);
+    /* CHANGE: We now store the exact role that sent it (d.from), instead of checking isMine */
+    S.messages.push({from:d.from,label:lbl,text:d.text,time:d.time});
+    updateChatDOM(); 
   }
   if(d.type==='video_call_request'&&S.role==='nurse'){
     S.nurseNotifications.unshift({id:now(),type:'videocall',title:'Family video call request',sub:'Family would like to call '+S.patientName+' · '+tsShort(),priority:'high',ts:tsShort()});
@@ -339,15 +367,15 @@ CH.onmessage=e=>{
   }
 };
 function handlePing(from){
-  if(from==='patient'&&(S.role==='family'||S.role==='nurse')){S.patientConnected=true;CH.postMessage({type:'pong',from:S.role});render();}
-  if(from==='family'&&(S.role==='patient'||S.role==='nurse')){S.familyConnected=true;CH.postMessage({type:'pong',from:S.role});render();}
-  if(from==='nurse'&&(S.role==='patient'||S.role==='family')){S.nurseConnected=true;CH.postMessage({type:'pong',from:S.role});render();}
+  if(from==='patient'&&(S.role==='family'||S.role==='nurse')){S.patientConnected=true;CH.postMessage({type:'pong',from:S.role});updateConnections();}
+  if(from==='family'&&(S.role==='patient'||S.role==='nurse')){S.familyConnected=true;CH.postMessage({type:'pong',from:S.role});updateConnections();}
+  if(from==='nurse'&&(S.role==='patient'||S.role==='family')){S.nurseConnected=true;CH.postMessage({type:'pong',from:S.role});updateConnections();}
 }
 function handlePong(from){
   if(from==='patient')S.patientConnected=true;
   if(from==='family')S.familyConnected=true;
   if(from==='nurse')S.nurseConnected=true;
-  render();
+  updateConnections();
 }
 
 function playTone(freqs){
@@ -410,14 +438,12 @@ async function startCamera(){
     const vid=document.getElementById('pVid'),canvas=document.getElementById('pCanvas');
     if(!canvas||!vid)return;
     const ctx=canvas.getContext('2d');
-    /* results.image is the exact frame MediaPipe processed — always has correct dimensions */
     const src=results.image||vid;
     const W=src.width||src.videoWidth||640;
     const H=src.height||src.videoHeight||480;
     if(canvas.width!==W)canvas.width=W;
     if(canvas.height!==H)canvas.height=H;
 
-    /* Draw mirrored video frame first */
     ctx.save();
     ctx.translate(W,0);
     ctx.scale(-1,1);
@@ -426,7 +452,6 @@ async function startCamera(){
 
     if(results.multiFaceLandmarks?.length){
       const lm=results.multiFaceLandmarks[0];
-      /* landmarks come from the non-mirrored image, mirror them to match canvas */
       const mirroredLm=lm.map(p=>({x:1-p.x,y:p.y,z:p.z}));
       if(S.isMonitoring)processFrame(lm);
       const fd=document.getElementById('ps-face');if(fd){fd.textContent='face ✓';fd.style.color='#4cc98a';}
@@ -458,9 +483,10 @@ function sendMsg(){
   const inp=document.getElementById('msg-input');if(!inp||!inp.value.trim())return;
   const text=inp.value.trim(),time=tsShort();inp.value='';
   const lbl={patient:'Patient',family:'Family',nurse:'Nurse'}[S.role];
-  S.messages.push({from:'me',label:lbl,text,time});
+  /* CHANGE: We now store the exact role that sent it (S.role), instead of hardcoding 'me' */
+  S.messages.push({from:S.role,label:lbl,text,time});
   CH.postMessage({type:'chat',from:S.role,text,time});
-  render();setTimeout(()=>{const ml=document.getElementById('msg-list');if(ml)ml.scrollTop=ml.scrollHeight;},50);
+  updateChatDOM();
 }
 
 function updatePatientLive(){
@@ -529,11 +555,19 @@ function evHTML(evs){
   return evs.map(e=>`<div class="ev-item"><div class="ev-pip" style="background:${col[e.type]||'var(--ink4)'}"></div><div><div style="font-size:12px;color:var(--ink);line-height:1.4">${e.text}</div><div style="font-size:10px;color:var(--ink3)">${e.time}</div></div></div>`).join('');
 }
 
-function connChip(on,label){return `<div class="conn-chip ${on?'conn-on':'conn-off'}">${on?'<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--green);margin-right:4px;vertical-align:middle;"></span>':''}${label}</div>`;}
+function connChip(on,label, id){return `<div ${id ? `id="${id}"` : ''} class="conn-chip ${on?'conn-on':'conn-off'}">${on?'<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--green);margin-right:4px;vertical-align:middle;"></span>':''}${label}</div>`;}
+
 function msgListHTML(){
   if(!S.messages.length)return '<div style="font-size:11px;color:var(--ink4);font-style:italic">No messages yet.</div>';
-  return S.messages.map(m=>`<div class="${m.from==='me'?'mb-me-wrap':'mb-other-wrap'}"><div class="${m.from==='me'?'mb-me':m.from==='nurse'?'mb-nurse':'mb-other'}">${m.from!=='me'?`<span style="font-size:10px;opacity:0.65;display:block;margin-bottom:2px">${m.label}</span>`:''}${m.text}</div><div class="msg-meta">${m.time}</div></div>`).join('');
+  return S.messages.map(m=>{
+    /* CHANGE: Instead of looking for 'me', we dynamically check if the sender matches the CURRENT view's role */
+    const isMe = (m.from === S.role);
+    const wrapCls = isMe ? 'mb-me-wrap' : 'mb-other-wrap';
+    const bubCls = isMe ? 'mb-me' : (m.from === 'nurse' ? 'mb-nurse' : 'mb-other');
+    return `<div class="${wrapCls}"><div class="${bubCls}">${!isMe ? `<span style="font-size:10px;opacity:0.65;display:block;margin-bottom:2px">${m.label}</span>`:''}${m.text}</div><div class="msg-meta">${m.time}</div></div>`;
+  }).join('');
 }
+
 function msgBox(placeholder){return `<div class="gc" style="padding:13px 15px;"><div class="eyebrow">Messages</div><div class="msg-list" id="msg-list">${msgListHTML()}</div><div class="msg-row"><input class="msg-inp" id="msg-input" placeholder="${placeholder}" onkeydown="if(event.key==='Enter')sendMsg()"/><button class="btn btn-primary" style="padding:8px 12px" onclick="sendMsg()"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M10 1L4.5 6M10 1L7 10L4.5 6M10 1L1 4L4.5 6" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div>`;}
 
 function remoteTimelineHTML(){
@@ -568,7 +602,6 @@ function renderPatient(){
   const openThreshPct=Math.round(EAR_OPEN/0.4*100);
   const blinkThreshPct=Math.round(EAR_BLINK/0.4*100);
 
-  /* ── KEY CHANGE: video hidden but still sized; canvas draws the full frame ── */
   const camContent=S.isMonitoring
     ?`<video id="pVid" autoplay muted playsinline style="position:absolute;visibility:hidden;width:1px;height:1px;"></video>
        <canvas id="pCanvas" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:16px;"></canvas>
@@ -595,11 +628,11 @@ function renderPatient(){
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
         <span class="mp-chip ${mpCls}" id="mp-chip">${mpLbl}</span>
-        ${connChip(S.familyConnected,'Family')}${connChip(S.nurseConnected,'Nurse')}
+        ${connChip(S.familyConnected,'Family','conn-family')}${connChip(S.nurseConnected,'Nurse','conn-nurse')}
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 252px;gap:14px;align-items:start;">
+    <div class="dashboard-grid">
       <div style="display:flex;flex-direction:column;gap:12px;">
 
         ${S.videoCallUrl
@@ -686,11 +719,11 @@ function renderFamily(){
   return `<div style="padding:20px 24px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
       <div><div style="font-family:'DM Serif Display',serif;font-size:26px;color:var(--ink)">Family view</div><div style="font-size:12px;color:var(--ink3);margin-top:2px">Watching ${S.patientName} · ${S.patientRoom}</div></div>
-      <div style="display:flex;gap:6px;align-items:center;">${connChip(S.patientConnected,'Patient')}<button class="btn btn-ghost" style="padding:6px 12px;font-size:11px" onclick="S.role=null;render()">Switch</button></div>
+      <div style="display:flex;gap:6px;align-items:center;">${connChip(S.patientConnected,'Patient','conn-patient')}<button class="btn btn-ghost" style="padding:6px 12px;font-size:11px" onclick="S.role=null;render()">Switch</button></div>
     </div>
     ${isAwake?`<div class="alert-banner ab-green"><div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:50%;background:var(--green-dim);border:1px solid var(--green-border);display:flex;align-items:center;justify-content:center;animation:breathe 1.5s infinite;"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="var(--green)" stroke-width="1.2"/><path d="M4 6.5l2 2 3.5-3.5" stroke="var(--green)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div style="font-family:'DM Serif Display',serif;font-size:17px;color:var(--ink)">${S.patientName} is awake</div><div style="font-size:12px;color:#1e7a4e;margin-top:1px">Eyes open detected</div></div></div>${S.videoCallState===null?`<button class="btn btn-green" onclick="S.videoCallState='pending';CH.postMessage({type:'video_call_request'});render()">📹 Request call</button>`:S.videoCallState==='pending'?`<div style="font-size:12px;color:#7a4a00;padding:6px 12px;background:var(--amber-dim);border:1px solid var(--amber-border);border-radius:9px;white-space:nowrap;">Waiting for nurse…</div>`:S.videoCallState==='allowed'?`<div style="font-size:12px;color:#1e7a4e;padding:6px 12px;background:var(--green-dim);border:1px solid var(--green-border);border-radius:9px;white-space:nowrap;">✓ Call approved</div>`:`<div style="font-size:12px;color:#7a1e1e;padding:6px 12px;background:var(--red-dim);border:1px solid var(--red-border);border-radius:9px;white-space:nowrap;">Call declined</div>`}</div>`:''}
     ${isAsleep?`<div class="alert-banner ab-blue"><div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:50%;background:var(--blue-dim);border:1px solid var(--blue-border);display:flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="var(--blue)" stroke-width="1.2"/><path d="M4.5 8.5C5 7 8 7 8.5 5.5" stroke="var(--blue)" stroke-width="1.2" stroke-linecap="round"/></svg></div><div><div style="font-family:'DM Serif Display',serif;font-size:17px;color:var(--ink)">${S.patientName} is sleeping</div><div style="font-size:12px;color:#1e3e7a;margin-top:1px">Sleep confirmed — resting quietly</div></div></div></div>`:''}
-    <div style="display:grid;grid-template-columns:1fr 250px;gap:14px;align-items:start;">
+    <div class="dashboard-grid">
       <div style="display:flex;flex-direction:column;gap:12px;">
         ${S.videoCallUrl
           ? `<div style="position:relative; width:100%; height:400px; border-radius:18px; overflow:hidden; background:#0c0a16; border: 2px solid var(--purple);">
@@ -740,12 +773,12 @@ function renderNurse(){
   return `<div style="padding:20px 24px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
       <div><div style="font-family:'DM Serif Display',serif;font-size:26px;color:var(--ink)">Nurse station</div><div style="font-size:12px;color:var(--ink3);margin-top:2px">${unacked.length?`<span style="color:#7a4a00;font-weight:500">${unacked.length} unacknowledged</span>`:'All clear'}</div></div>
-      <div style="display:flex;gap:6px;align-items:center;">${connChip(S.patientConnected,'Patient')}<button class="btn btn-ghost" style="padding:6px 12px;font-size:11px" onclick="S.role=null;render()">Switch</button></div>
+      <div style="display:flex;gap:6px;align-items:center;">${connChip(S.patientConnected,'Patient','conn-patient')}<button class="btn btn-ghost" style="padding:6px 12px;font-size:11px" onclick="S.role=null;render()">Switch</button></div>
     </div>
     ${isAwake?`<div class="alert-banner ab-green"><div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:50%;background:var(--green-dim);border:1px solid var(--green-border);display:flex;align-items:center;justify-content:center;animation:breathe 1.5s infinite;"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="var(--green)" stroke-width="1.1"/><path d="M4 6.5l2 2 3.5-3.5" stroke="var(--green)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div style="font-family:'DM Serif Display',serif;font-size:16px;color:var(--ink)">${S.patientName} — awake</div><div style="font-size:11px;color:#1e7a4e;">Patient may need attention</div></div></div><button class="btn btn-green" onclick="S.nurseBannerDismissed=true;S.nurseNotifications.filter(n=>n.type==='eye').forEach(n=>n.acked=true);render()">Acknowledge</button></div>`:''}
     ${hiM?`<div class="alert-banner ab-amber"><div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:50%;background:var(--amber-dim);border:1px solid var(--amber-border);display:flex;align-items:center;justify-content:center;animation:breathe 1.4s infinite;"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1.5L12 11H1L6.5 1.5z" stroke="var(--amber)" stroke-width="1.1" stroke-linejoin="round"/><path d="M6.5 5.5v2.5M6.5 9.5v.5" stroke="var(--amber)" stroke-width="1.2" stroke-linecap="round"/></svg></div><div><div style="font-family:'DM Serif Display',serif;font-size:16px;color:var(--ink)">${S.patientName} — high movement (${S.motionLevel}%)</div><div style="font-size:11px;color:#7a4a00;">May be in distress</div></div></div><button class="btn btn-amber" onclick="S.nurseMotionCooldown=Date.now()+30000;render()">Acknowledge</button></div>`:''}
 
-    <div style="display:grid;grid-template-columns:1fr 260px;gap:14px;align-items:start;">
+    <div class="dashboard-grid">
       <div style="display:flex;flex-direction:column;gap:12px;">
         ${S.videoCallUrl
           ? `<div style="position:relative; width:100%; height:400px; border-radius:18px; overflow:hidden; background:#0c0a16; border: 2px solid var(--purple);">
